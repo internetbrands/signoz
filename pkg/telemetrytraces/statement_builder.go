@@ -48,7 +48,7 @@ func NewTraceQueryStatementBuilder(
 
 	resourceFilterStmtBuilder := telemetryresourcefilter.New[qbtypes.TraceAggregation](
 		settings,
-		DBName,
+		DBName(),
 		TracesResourceV3TableName,
 		telemetrytypes.SignalTraces,
 		telemetrytypes.SourceUnspecified,
@@ -319,7 +319,7 @@ func (b *traceQueryStatementBuilder) buildListQuery(
 	}
 
 	// From table
-	sb.From(fmt.Sprintf("%s.%s", DBName, SpanIndexV3TableName))
+	sb.From(fmt.Sprintf("%s.%s", DBName(), SpanIndexV3TableName))
 
 	// Add filter conditions
 	preparedWhereClause, err := b.addFilterCondition(ctx, sb, start, end, query, keys, variables)
@@ -378,7 +378,7 @@ func (b *traceQueryStatementBuilder) buildTraceQuery(
 
 	distSB := sqlbuilder.NewSelectBuilder()
 	distSB.Select("trace_id")
-	distSB.From(fmt.Sprintf("%s.%s", DBName, SpanIndexV3TableName))
+	distSB.From(fmt.Sprintf("%s.%s", DBName(), SpanIndexV3TableName))
 
 	var (
 		cteFragments []string
@@ -406,7 +406,7 @@ func (b *traceQueryStatementBuilder) buildTraceQuery(
 	// Build the inner subquery for root spans
 	innerSB := sqlbuilder.NewSelectBuilder()
 	innerSB.Select("trace_id", "duration_nano", sqlbuilder.Escape("resource_string_service$$name as `service.name`"), "name")
-	innerSB.From(fmt.Sprintf("%s.%s", DBName, SpanIndexV3TableName))
+	innerSB.From(fmt.Sprintf("%s.%s", DBName(), SpanIndexV3TableName))
 	innerSB.Where("parent_span_id = ''")
 
 	// this only helps when there is a filter
@@ -538,7 +538,7 @@ func (b *traceQueryStatementBuilder) buildTimeSeriesQuery(
 		sb.SelectMore(fmt.Sprintf("%s AS __result_%d", rewritten, i))
 	}
 
-	sb.From(fmt.Sprintf("%s.%s", DBName, SpanIndexV3TableName))
+	sb.From(fmt.Sprintf("%s.%s", DBName(), SpanIndexV3TableName))
 	preparedWhereClause, err := b.addFilterCondition(ctx, sb, start, end, query, keys, variables)
 	if err != nil {
 		return nil, err
@@ -691,7 +691,7 @@ func (b *traceQueryStatementBuilder) buildScalarQuery(
 	}
 
 	// From table
-	sb.From(fmt.Sprintf("%s.%s", DBName, SpanIndexV3TableName))
+	sb.From(fmt.Sprintf("%s.%s", DBName(), SpanIndexV3TableName))
 
 	// Add filter conditions
 	preparedWhereClause, err := b.addFilterCondition(ctx, sb, start, end, query, keys, variables)

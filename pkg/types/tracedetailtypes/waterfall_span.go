@@ -12,8 +12,7 @@ import (
 )
 
 const (
-	// ClickHouse database and table names for trace queries.
-	TraceDB           = "signoz_traces"
+	// ClickHouse table names for trace queries.
 	TraceTable        = "distributed_signoz_index_v3"
 	TraceSummaryTable = "distributed_trace_summary"
 )

@@ -228,7 +228,7 @@ func (m *module) getPerGroupPodPhaseCounts(
 		)
 	}
 	timeSeriesFPs.Select(timeSeriesFPsSelectCols...)
-	timeSeriesFPs.From(fmt.Sprintf("%s.%s", telemetrymetrics.DBName, localTimeSeriesTable))
+	timeSeriesFPs.From(fmt.Sprintf("%s.%s", telemetrymetrics.DBName(), localTimeSeriesTable))
 	timeSeriesFPs.Where(
 		timeSeriesFPs.E("metric_name", podPhaseMetricName),
 		timeSeriesFPs.GE("unix_milli", adjustedStart),
@@ -264,7 +264,7 @@ func (m *module) getPerGroupPodPhaseCounts(
 	latestPhasePerPod.Select(latestPhasePerPodSelectCols...)
 	latestPhasePerPod.From(fmt.Sprintf(
 		"%s.%s AS samples INNER JOIN time_series_fps AS tsfp ON samples.fingerprint = tsfp.fingerprint",
-		telemetrymetrics.DBName, samplesTable,
+		telemetrymetrics.DBName(), samplesTable,
 	))
 	latestPhasePerPod.Where(
 		latestPhasePerPod.E("samples.metric_name", podPhaseMetricName),

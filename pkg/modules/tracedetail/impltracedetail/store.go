@@ -9,6 +9,7 @@ import (
 
 	"github.com/SigNoz/signoz/pkg/errors"
 	"github.com/SigNoz/signoz/pkg/telemetrystore"
+	"github.com/SigNoz/signoz/pkg/telemetrytraces"
 	"github.com/SigNoz/signoz/pkg/types/tracedetailtypes"
 )
 
@@ -23,7 +24,7 @@ func NewTraceStore(ts telemetrystore.TelemetryStore) *traceStore {
 func (s *traceStore) GetTraceSummary(ctx context.Context, traceID string) (*tracedetailtypes.TraceSummary, error) {
 	sb := sqlbuilder.NewSelectBuilder()
 	sb.Select("trace_id", "min(start) AS start", "max(end) AS end", "sum(num_spans) AS num_spans")
-	sb.From(fmt.Sprintf("%s.%s", tracedetailtypes.TraceDB, tracedetailtypes.TraceSummaryTable))
+	sb.From(fmt.Sprintf("%s.%s", telemetrytraces.DBName(), tracedetailtypes.TraceSummaryTable))
 	sb.Where(sb.E("trace_id", traceID))
 	sb.GroupBy("trace_id")
 	query, args := sb.BuildWithFlavor(sqlbuilder.ClickHouse)
@@ -55,7 +56,7 @@ func (s *traceStore) GetTraceSpans(ctx context.Context, traceID string, summary 
 		FROM %s.%s
 		WHERE trace_id=? AND ts_bucket_start>=? AND ts_bucket_start<=?
 		ORDER BY timestamp ASC, name ASC`,
-		tracedetailtypes.TraceDB, tracedetailtypes.TraceTable,
+		telemetrytraces.DBName(), tracedetailtypes.TraceTable,
 	)
 	var spanItems []tracedetailtypes.StorableSpan
 	err := s.telemetryStore.ClickhouseDB().Select(

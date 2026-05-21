@@ -319,7 +319,7 @@ func (m *module) buildSamplesTblFingerprintSubQuery(metricNames []string, startM
 	localSamplesTable := strings.TrimPrefix(samplesTableName, "distributed_")
 	fpSB := sqlbuilder.NewSelectBuilder()
 	fpSB.Select("DISTINCT fingerprint")
-	fpSB.From(fmt.Sprintf("%s.%s", telemetrymetrics.DBName, localSamplesTable))
+	fpSB.From(fmt.Sprintf("%s.%s", telemetrymetrics.DBName(), localSamplesTable))
 	fpSB.Where(
 		fpSB.In("metric_name", sqlbuilder.List(metricNames)),
 		fpSB.GE("unix_milli", startMs),
@@ -388,7 +388,7 @@ func (m *module) getMetricsExistenceAndEarliestTime(ctx context.Context, metricN
 
 	sb := sqlbuilder.NewSelectBuilder()
 	sb.Select("metric_name", "count(*) AS cnt", "min(first_reported_unix_milli) AS min_first_reported")
-	sb.From(fmt.Sprintf("%s.%s", telemetrymetrics.DBName, telemetrymetrics.AttributesMetadataTableName))
+	sb.From(fmt.Sprintf("%s.%s", telemetrymetrics.DBName(), telemetrymetrics.AttributesMetadataTableName))
 	sb.Where(sb.In("metric_name", sqlbuilder.List(metricNames)))
 	sb.GroupBy("metric_name")
 
@@ -491,7 +491,7 @@ func (m *module) getMetadata(
 	}
 
 	innerSB.Select(innerSelectCols...)
-	innerSB.From(fmt.Sprintf("%s.%s", telemetrymetrics.DBName, distributedTableName))
+	innerSB.From(fmt.Sprintf("%s.%s", telemetrymetrics.DBName(), distributedTableName))
 	innerSB.Where(
 		innerSB.In("metric_name", sqlbuilder.List(metricNames)),
 		innerSB.GE("unix_milli", adjustedStart),

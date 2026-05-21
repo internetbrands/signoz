@@ -59,7 +59,7 @@ func (m *module) getPerGroupHostStatusCounts(
 	fpSB := m.buildSamplesTblFingerprintSubQuery(metricNames, req.Start, req.End)
 
 	sb.Select(selectCols...)
-	sb.From(fmt.Sprintf("%s.%s", telemetrymetrics.DBName, distributedTimeSeriesTableName))
+	sb.From(fmt.Sprintf("%s.%s", telemetrymetrics.DBName(), distributedTimeSeriesTableName))
 	sb.Where(
 		sb.In("metric_name", sqlbuilder.List(metricNames)),
 		sb.GE("unix_milli", adjustedStart),
@@ -312,7 +312,7 @@ func (m *module) getActiveHostsQuery(metricNames []string, hostNameAttr string, 
 	sb := sqlbuilder.NewSelectBuilder()
 	sb.Distinct()
 	sb.Select("attr_string_value")
-	sb.From(fmt.Sprintf("%s.%s", telemetrymetrics.DBName, telemetrymetrics.AttributesMetadataTableName))
+	sb.From(fmt.Sprintf("%s.%s", telemetrymetrics.DBName(), telemetrymetrics.AttributesMetadataTableName))
 	sb.Where(
 		sb.In("metric_name", sqlbuilder.List(metricNames)),
 		sb.E("attr_name", hostNameAttr),
