@@ -9,6 +9,7 @@ import (
 	"github.com/SigNoz/signoz/pkg/query-service/constants"
 	v3 "github.com/SigNoz/signoz/pkg/query-service/model/v3"
 	"github.com/SigNoz/signoz/pkg/query-service/utils"
+	"github.com/SigNoz/signoz/pkg/telemetryschema/logstelemetryschema"
 )
 
 var logOperators = map[v3.FilterOperator]string{
@@ -45,9 +46,13 @@ const (
 	BODY                         = "body"
 	DISTRIBUTED_LOGS_V2          = "distributed_logs_v2"
 	DISTRIBUTED_LOGS_V2_RESOURCE = "distributed_logs_v2_resource"
-	DB_NAME                      = "signoz_logs"
 	NANOSECOND                   = 1000000000
 )
+
+// dbName returns the database name for logs
+func dbName() string {
+	return logstelemetryschema.DBName()
+}
 
 func getClickhouseLogsColumnDataType(columnDataType v3.AttributeKeyDataType) string {
 	if columnDataType == v3.AttributeKeyDataTypeFloat64 || columnDataType == v3.AttributeKeyDataTypeInt64 {
@@ -308,7 +313,7 @@ func generateAggregateClause(panelType v3.PanelType, start, end int64, aggOp v3.
 	having string,
 	orderBy string,
 ) (string, error) {
-	queryTmpl := " %s as value from signoz_logs." + DISTRIBUTED_LOGS_V2 +
+	queryTmpl := " %s as value from " + logstelemetryschema.DBName() + "." + DISTRIBUTED_LOGS_V2 +
 		" where " + timeFilter + "%s" +
 		"%s%s" +
 		"%s"
@@ -383,7 +388,7 @@ func buildLogsQuery(panelType v3.PanelType, start, end, step int64, mq *v3.Build
 	}
 
 	// build the where clause for resource table
-	resourceSubQuery, err := resource.BuildResourceSubQuery(DB_NAME, DISTRIBUTED_LOGS_V2_RESOURCE, bucketStart, bucketEnd, mq.Filters, mq.GroupBy, mq.AggregateAttribute, false, false)
+	resourceSubQuery, err := resource.BuildResourceSubQuery(dbName(), DISTRIBUTED_LOGS_V2_RESOURCE, bucketStart, bucketEnd, mq.Filters, mq.GroupBy, mq.AggregateAttribute, false, false)
 	if err != nil {
 		return "", err
 	}
@@ -408,7 +413,7 @@ func buildLogsQuery(panelType v3.PanelType, start, end, step int64, mq *v3.Build
 		if useJSONBody {
 			sqlSelect = constants.LogsSQLSelectV2WithBodyJSON
 		}
-		queryTmpl := sqlSelect + "from signoz_logs.%s where %s%s order by %s"
+		queryTmpl := sqlSelect + "from " + logstelemetryschema.DBName() + ".%s where %s%s order by %s"
 		query := fmt.Sprintf(queryTmpl, DISTRIBUTED_LOGS_V2, timeFilter, filterSubQuery, orderBy)
 		return query, nil
 		// ---- NOOP ends here ----
@@ -475,7 +480,7 @@ func buildLogsLiveTailQuery(mq *v3.BuilderQuery) (string, error) {
 	}
 
 	// no values for bucket start and end
-	resourceSubQuery, err := resource.BuildResourceSubQuery(DB_NAME, DISTRIBUTED_LOGS_V2_RESOURCE, 0, 0, mq.Filters, mq.GroupBy, mq.AggregateAttribute, true, false)
+	resourceSubQuery, err := resource.BuildResourceSubQuery(dbName(), DISTRIBUTED_LOGS_V2_RESOURCE, 0, 0, mq.Filters, mq.GroupBy, mq.AggregateAttribute, true, false)
 	if err != nil {
 		return "", err
 	}
@@ -491,7 +496,7 @@ func buildLogsLiveTailQuery(mq *v3.BuilderQuery) (string, error) {
 	// the reader will add the timestamp and id filters
 	switch mq.AggregateOperator {
 	case v3.AggregateOperatorNoOp:
-		query := constants.LogsSQLSelectV2 + "from signoz_logs." + DISTRIBUTED_LOGS_V2 + " where "
+		query := constants.LogsSQLSelectV2 + "from " + logstelemetryschema.DBName() + "." + DISTRIBUTED_LOGS_V2 + " where "
 		if len(filterSubQuery) > 0 {
 			query = query + filterSubQuery + " AND "
 		}

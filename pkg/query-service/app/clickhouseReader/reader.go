@@ -20,6 +20,10 @@ import (
 	"github.com/SigNoz/signoz/pkg/flagger"
 	"github.com/SigNoz/signoz/pkg/prometheus"
 	"github.com/SigNoz/signoz/pkg/sqlstore"
+	"github.com/SigNoz/signoz/pkg/telemetrymetadata"
+	"github.com/SigNoz/signoz/pkg/telemetryschema/metertelemetryschema"
+	"github.com/SigNoz/signoz/pkg/telemetryschema/metricstelemetryschema"
+	"github.com/SigNoz/signoz/pkg/telemetryschema/tracestelemetryschema"
 	"github.com/SigNoz/signoz/pkg/telemetrystore"
 	"github.com/SigNoz/signoz/pkg/types"
 	"github.com/SigNoz/signoz/pkg/types/ctxtypes"
@@ -51,6 +55,7 @@ import (
 	"github.com/SigNoz/signoz/pkg/query-service/common"
 	"github.com/SigNoz/signoz/pkg/query-service/constants"
 
+	"github.com/SigNoz/signoz/pkg/analytics"
 	chErrors "github.com/SigNoz/signoz/pkg/query-service/errors"
 	"github.com/SigNoz/signoz/pkg/query-service/metrics"
 	"github.com/SigNoz/signoz/pkg/query-service/model"
@@ -61,8 +66,6 @@ import (
 const (
 	primaryNamespace          = "clickhouse"
 	archiveNamespace          = "clickhouse-archive"
-	signozTraceDBName         = "signoz_traces"
-	signozHistoryDBName       = "signoz_analytics"
 	ruleStateHistoryTableName = "distributed_rule_state_history_v0"
 	signozDurationMVTable     = "distributed_durationSort"
 	signozUsageExplorerTable  = "distributed_usage_explorer"
@@ -70,9 +73,6 @@ const (
 	signozErrorIndexTable     = "distributed_signoz_error_index_v2"
 	signozTraceTableName      = "distributed_signoz_index_v2"
 	signozTraceLocalTableName = "signoz_index_v2"
-	signozMetricDBName        = "signoz_metrics"
-	signozMetadataDbName      = "signoz_metadata"
-	signozMeterDBName         = "signoz_meter"
 	signozMeterSamplesName    = "samples_agg_1d"
 
 	signozSampleLocalTableName = "samples_v4"
@@ -113,6 +113,26 @@ const (
 		"ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 	NANOSECOND = 1000000000
 )
+
+func signozTraceDBName() string {
+	return tracestelemetryschema.DBName()
+}
+
+func signozMetricDBName() string {
+	return metricstelemetryschema.DBName()
+}
+
+func signozMeterDBName() string {
+	return metertelemetryschema.DBName()
+}
+
+func signozMetadataDbName() string {
+	return telemetrymetadata.DBName()
+}
+
+func signozHistoryDBName() string {
+	return analytics.DBName()
+}
 
 var (
 	ErrNoOperationsTable            = errors.New("no operations table supplied")
@@ -1793,14 +1813,14 @@ func (r *ClickHouseReader) setTTLMetrics(ctx context.Context, orgID string, para
 		coldStorageDuration = int(params.ToColdStorageDuration)
 	}
 	tableNames := []string{
-		signozMetricDBName + "." + signozSampleLocalTableName,
-		signozMetricDBName + "." + signozSamplesAgg5mLocalTableName,
-		signozMetricDBName + "." + signozSamplesAgg30mLocalTableName,
-		signozMetricDBName + "." + signozExpHistLocalTableName,
-		signozMetricDBName + "." + signozTSLocalTableNameV4,
-		signozMetricDBName + "." + signozTSLocalTableNameV46Hrs,
-		signozMetricDBName + "." + signozTSLocalTableNameV41Day,
-		signozMetricDBName + "." + signozTSLocalTableNameV41Week,
+		signozMetricDBName() + "." + signozSampleLocalTableName,
+		signozMetricDBName() + "." + signozSamplesAgg5mLocalTableName,
+		signozMetricDBName() + "." + signozSamplesAgg30mLocalTableName,
+		signozMetricDBName() + "." + signozExpHistLocalTableName,
+		signozMetricDBName() + "." + signozTSLocalTableNameV4,
+		signozMetricDBName() + "." + signozTSLocalTableNameV46Hrs,
+		signozMetricDBName() + "." + signozTSLocalTableNameV41Day,
+		signozMetricDBName() + "." + signozTSLocalTableNameV41Week,
 	}
 	for _, tableName := range tableNames {
 		statusItem, apiErr := r.checkTTLStatusItem(ctx, orgID, tableName)
@@ -2093,7 +2113,7 @@ func (r *ClickHouseReader) GetTTL(ctx context.Context, orgID string, ttlParams *
 	getTracesTTL := func() (*retentiontypes.DBResponseTTL, *model.ApiError) {
 		var dbResp []retentiontypes.DBResponseTTL
 
-		query := fmt.Sprintf("SELECT engine_full FROM system.tables WHERE name='%v' AND database='%v'", r.traceLocalTableName, signozTraceDBName)
+		query := fmt.Sprintf("SELECT engine_full FROM system.tables WHERE name='%v' AND database='%v'", r.traceLocalTableName, signozTraceDBName())
 
 		err := r.db.Select(ctx, &dbResp, query)
 
@@ -2158,7 +2178,7 @@ func (r *ClickHouseReader) GetTTL(ctx context.Context, orgID string, ttlParams *
 		return &retentiontypes.GetTTLResponseItem{TracesTime: delTTL, TracesMoveTime: moveTTL, ExpectedTracesTime: ttlQuery.TTL, ExpectedTracesMoveTime: ttlQuery.ColdStorageTTL, Status: status}, nil
 
 	case retentiontypes.MetricsTTL:
-		tableNameArray := []string{signozMetricDBName + "." + signozSampleTableName}
+		tableNameArray := []string{signozMetricDBName() + "." + signozSampleTableName}
 		tableNameArray = getLocalTableNameArray(tableNameArray)
 		status, apiErr := r.getTTLQueryStatus(ctx, orgID, tableNameArray)
 		if apiErr != nil {
@@ -2966,14 +2986,14 @@ func (r *ClickHouseReader) GetMetricAggregateAttributes(ctx context.Context, org
 				UNION ALL
 				SELECT metric_name FROM %s.%s WHERE metric_name ILIKE $1
 			 )`,
-			signozMetricDBName, signozTSTableNameV41Day,
-			signozMetricDBName, signozTSTableNameV4Reduced)
+			signozMetricDBName(), signozTSTableNameV41Day,
+			signozMetricDBName(), signozTSTableNameV4Reduced)
 	} else {
 		query = fmt.Sprintf(
 			`SELECT DISTINCT metric_name
 			 FROM %s.%s
 			 WHERE metric_name ILIKE $1`,
-			signozMetricDBName, signozTSTableNameV41Day)
+			signozMetricDBName(), signozTSTableNameV41Day)
 	}
 
 	if req.Limit != 0 {
@@ -3053,7 +3073,7 @@ func (r *ClickHouseReader) GetMeterAggregateAttributes(ctx context.Context, orgI
 		 FROM %s.%s
 		 WHERE metric_name ILIKE $1
 		 GROUP BY metric_name,type,temporality,is_monotonic`,
-		signozMeterDBName, signozMeterSamplesName)
+		signozMeterDBName(), signozMeterSamplesName)
 
 	if req.Limit != 0 {
 		query = query + fmt.Sprintf(" LIMIT %d;", req.Limit)
@@ -3108,9 +3128,9 @@ func (r *ClickHouseReader) GetMetricAttributeKeys(ctx context.Context, orgID val
 
 	// skips the internal attributes i.e attributes starting with __
 	if reductionEnabled {
-		query = fmt.Sprintf("SELECT arrayJoin(tagKeys) AS distinctTagKey FROM (SELECT JSONExtractKeys(labels) AS tagKeys FROM %s.%s WHERE metric_name=$1 AND unix_milli >= $2 GROUP BY tagKeys UNION ALL SELECT JSONExtractKeys(labels) AS tagKeys FROM %s.%s WHERE metric_name=$1 AND unix_milli >= $2 GROUP BY tagKeys) WHERE distinctTagKey ILIKE $3 AND distinctTagKey NOT LIKE '\\_\\_%%' GROUP BY distinctTagKey", signozMetricDBName, signozTSTableNameV41Day, signozMetricDBName, signozTSTableNameV4Reduced)
+		query = fmt.Sprintf("SELECT arrayJoin(tagKeys) AS distinctTagKey FROM (SELECT JSONExtractKeys(labels) AS tagKeys FROM %s.%s WHERE metric_name=$1 AND unix_milli >= $2 GROUP BY tagKeys UNION ALL SELECT JSONExtractKeys(labels) AS tagKeys FROM %s.%s WHERE metric_name=$1 AND unix_milli >= $2 GROUP BY tagKeys) WHERE distinctTagKey ILIKE $3 AND distinctTagKey NOT LIKE '\\_\\_%%' GROUP BY distinctTagKey", signozMetricDBName(), signozTSTableNameV41Day, signozMetricDBName(), signozTSTableNameV4Reduced)
 	} else {
-		query = fmt.Sprintf("SELECT arrayJoin(tagKeys) AS distinctTagKey FROM (SELECT JSONExtractKeys(labels) AS tagKeys FROM %s.%s WHERE metric_name=$1 AND unix_milli >= $2 GROUP BY tagKeys) WHERE distinctTagKey ILIKE $3 AND distinctTagKey NOT LIKE '\\_\\_%%' GROUP BY distinctTagKey", signozMetricDBName, signozTSTableNameV41Day)
+		query = fmt.Sprintf("SELECT arrayJoin(tagKeys) AS distinctTagKey FROM (SELECT JSONExtractKeys(labels) AS tagKeys FROM %s.%s WHERE metric_name=$1 AND unix_milli >= $2 GROUP BY tagKeys) WHERE distinctTagKey ILIKE $3 AND distinctTagKey NOT LIKE '\\_\\_%%' GROUP BY distinctTagKey", signozMetricDBName(), signozTSTableNameV41Day)
 	}
 	if req.Limit != 0 {
 		query = query + fmt.Sprintf(" LIMIT %d;", req.Limit)
@@ -3151,7 +3171,7 @@ func (r *ClickHouseReader) GetMeterAttributeKeys(ctx context.Context, req *v3.Fi
 	var response v3.FilterAttributeKeyResponse
 
 	// skips the internal attributes i.e attributes starting with __
-	query = fmt.Sprintf("SELECT DISTINCT arrayJoin(JSONExtractKeys(labels)) as attr_name FROM %s.%s WHERE metric_name=$1 AND attr_name ILIKE $2 AND attr_name NOT LIKE '\\_\\_%%'", signozMeterDBName, signozMeterSamplesName)
+	query = fmt.Sprintf("SELECT DISTINCT arrayJoin(JSONExtractKeys(labels)) as attr_name FROM %s.%s WHERE metric_name=$1 AND attr_name ILIKE $2 AND attr_name NOT LIKE '\\_\\_%%'", signozMeterDBName(), signozMeterSamplesName)
 	if req.Limit != 0 {
 		query = query + fmt.Sprintf(" LIMIT %d;", req.Limit)
 	}
@@ -3194,9 +3214,9 @@ func (r *ClickHouseReader) GetMetricAttributeValues(ctx context.Context, orgID v
 	reductionEnabled := r.fl.BooleanOrEmpty(ctx, flagger.FeatureEnableMetricsReduction, featuretypes.NewFlaggerEvaluationContext(orgID))
 
 	if reductionEnabled {
-		query = fmt.Sprintf("SELECT tagValue FROM (SELECT JSONExtractString(labels, $1) AS tagValue FROM %s.%s WHERE metric_name IN $2 AND JSONExtractString(labels, $3) ILIKE $4 AND unix_milli >= $5 UNION ALL SELECT JSONExtractString(labels, $1) AS tagValue FROM %s.%s WHERE metric_name IN $2 AND JSONExtractString(labels, $3) ILIKE $4 AND unix_milli >= $5) GROUP BY tagValue", signozMetricDBName, signozTSTableNameV41Day, signozMetricDBName, signozTSTableNameV4Reduced)
+		query = fmt.Sprintf("SELECT tagValue FROM (SELECT JSONExtractString(labels, $1) AS tagValue FROM %s.%s WHERE metric_name IN $2 AND JSONExtractString(labels, $3) ILIKE $4 AND unix_milli >= $5 UNION ALL SELECT JSONExtractString(labels, $1) AS tagValue FROM %s.%s WHERE metric_name IN $2 AND JSONExtractString(labels, $3) ILIKE $4 AND unix_milli >= $5) GROUP BY tagValue", signozMetricDBName(), signozTSTableNameV41Day, signozMetricDBName(), signozTSTableNameV4Reduced)
 	} else {
-		query = fmt.Sprintf("SELECT JSONExtractString(labels, $1) AS tagValue FROM %s.%s WHERE metric_name IN $2 AND JSONExtractString(labels, $3) ILIKE $4 AND unix_milli >= $5 GROUP BY tagValue", signozMetricDBName, signozTSTableNameV41Day)
+		query = fmt.Sprintf("SELECT JSONExtractString(labels, $1) AS tagValue FROM %s.%s WHERE metric_name IN $2 AND JSONExtractString(labels, $3) ILIKE $4 AND unix_milli >= $5 GROUP BY tagValue", signozMetricDBName(), signozTSTableNameV41Day)
 	}
 	if req.Limit != 0 {
 		query = query + fmt.Sprintf(" LIMIT %d;", req.Limit)
@@ -3290,7 +3310,7 @@ func (r *ClickHouseReader) GetMetricMetadata(ctx context.Context, orgID valuer.U
 						AND (JSONExtractString(labels, 'service_name') = $3 OR JSONExtractString(labels, 'service.name') = $4)
 				)
 				GROUP BY le
-				ORDER BY le`, signozMetricDBName, signozTSTableNameV41Day, signozMetricDBName, signozTSTableNameV4Reduced)
+				ORDER BY le`, signozMetricDBName(), signozTSTableNameV41Day, signozMetricDBName(), signozTSTableNameV4Reduced)
 		} else {
 			query = fmt.Sprintf(`
 			SELECT JSONExtractString(labels, 'le') AS le
@@ -3300,7 +3320,7 @@ func (r *ClickHouseReader) GetMetricMetadata(ctx context.Context, orgID valuer.U
 				AND type = 'Histogram'
 				AND (JSONExtractString(labels, 'service_name') = $3 OR JSONExtractString(labels, 'service.name') = $4)
 			GROUP BY le
-			ORDER BY le`, signozMetricDBName, signozTSTableNameV41Day)
+			ORDER BY le`, signozMetricDBName(), signozTSTableNameV41Day)
 		}
 
 		rows, err := r.db.Query(ctx, query, metricName, unixMilli, serviceName, serviceName)
@@ -3385,8 +3405,8 @@ func (r *ClickHouseReader) GetLatestReceivedMetric(
 		)
 		group by metric_name
 		limit 1
-		`, signozMetricDBName, signozTSTableNameV4, whereClause,
-			signozMetricDBName, signozTSTableNameV4Reduced, whereClause,
+		`, signozMetricDBName(), signozTSTableNameV4, whereClause,
+			signozMetricDBName(), signozTSTableNameV4Reduced, whereClause,
 		)
 	} else {
 		query = fmt.Sprintf(`
@@ -3395,7 +3415,7 @@ func (r *ClickHouseReader) GetLatestReceivedMetric(
 		where %s
 		group by metric_name
 		limit 1
-		`, signozMetricDBName, signozTSTableNameV4, whereClause,
+		`, signozMetricDBName(), signozTSTableNameV4, whereClause,
 		)
 	}
 
@@ -4513,7 +4533,7 @@ func (r *ClickHouseReader) AddRuleStateHistory(ctx context.Context, ruleStateHis
 	}()
 
 	statement, err = r.db.PrepareBatch(ctx, fmt.Sprintf("INSERT INTO %s.%s (rule_id, rule_name, overall_state, overall_state_changed, state, state_changed, unix_milli, labels, fingerprint, value) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)",
-		signozHistoryDBName, ruleStateHistoryTableName))
+		signozHistoryDBName(), ruleStateHistoryTableName))
 
 	if err != nil {
 		return err
@@ -4539,7 +4559,7 @@ func (r *ClickHouseReader) GetLastSavedRuleStateHistory(ctx context.Context, rul
 		instrumentationtypes.CodeFunctionName: "GetLastSavedRuleStateHistory",
 	})
 	query := fmt.Sprintf("SELECT * FROM %s.%s WHERE rule_id = '%s' AND state_changed = true ORDER BY unix_milli DESC LIMIT 1 BY fingerprint",
-		signozHistoryDBName, ruleStateHistoryTableName, ruleID)
+		signozHistoryDBName(), ruleStateHistoryTableName, ruleID)
 
 	history := []model.RuleStateHistory{}
 	err := r.db.Select(ctx, &history, query)
@@ -4615,7 +4635,7 @@ func (r *ClickHouseReader) ReadRuleStateHistoryByRuleID(
 	whereClause := strings.Join(conditions, " AND ")
 
 	query := fmt.Sprintf("SELECT * FROM %s.%s WHERE %s ORDER BY unix_milli %s LIMIT %d OFFSET %d",
-		signozHistoryDBName, ruleStateHistoryTableName, whereClause, params.Order, params.Limit, params.Offset)
+		signozHistoryDBName(), ruleStateHistoryTableName, whereClause, params.Order, params.Limit, params.Offset)
 
 	history := []model.RuleStateHistory{}
 	r.logger.Debug("rule state history query", "query", query)
@@ -4627,15 +4647,15 @@ func (r *ClickHouseReader) ReadRuleStateHistoryByRuleID(
 
 	var total uint64
 	r.logger.Debug("rule state history total query", "query", fmt.Sprintf("SELECT count(*) FROM %s.%s WHERE %s",
-		signozHistoryDBName, ruleStateHistoryTableName, whereClause))
+		signozHistoryDBName(), ruleStateHistoryTableName, whereClause))
 	err = r.db.QueryRow(ctx, fmt.Sprintf("SELECT count(*) FROM %s.%s WHERE %s",
-		signozHistoryDBName, ruleStateHistoryTableName, whereClause)).Scan(&total)
+		signozHistoryDBName(), ruleStateHistoryTableName, whereClause)).Scan(&total)
 	if err != nil {
 		return nil, err
 	}
 
 	labelsQuery := fmt.Sprintf("SELECT DISTINCT labels FROM %s.%s WHERE rule_id = $1",
-		signozHistoryDBName, ruleStateHistoryTableName)
+		signozHistoryDBName(), ruleStateHistoryTableName)
 	rows, err := r.db.Query(ctx, labelsQuery, ruleID)
 	if err != nil {
 		return nil, err
@@ -4683,7 +4703,7 @@ func (r *ClickHouseReader) ReadRuleStateHistoryTopContributorsByRuleID(
 	GROUP BY fingerprint
 	HAVING labels != '{}'
 	ORDER BY count DESC`,
-		signozHistoryDBName, ruleStateHistoryTableName, ruleID, model.StateFiring.String(), params.Start, params.End)
+		signozHistoryDBName(), ruleStateHistoryTableName, ruleID, model.StateFiring.String(), params.Start, params.End)
 
 	r.logger.Debug("rule state history top contributors query", "query", query)
 	contributors := []model.RuleStateHistoryContributor{}
@@ -4741,8 +4761,8 @@ FROM matched_events
 ORDER BY firing_time ASC;`
 
 	query := fmt.Sprintf(tmpl,
-		signozHistoryDBName, ruleStateHistoryTableName, ruleID, params.Start, params.End,
-		signozHistoryDBName, ruleStateHistoryTableName, ruleID, params.Start, params.End)
+		signozHistoryDBName(), ruleStateHistoryTableName, ruleID, params.Start, params.End,
+		signozHistoryDBName(), ruleStateHistoryTableName, ruleID, params.Start, params.End)
 
 	r.logger.Debug("overall state transitions query", "query", query)
 
@@ -4777,7 +4797,7 @@ ORDER BY firing_time ASC;`
 	// fetch the most recent overall_state from the table
 	var state model.AlertState
 	stateQuery := fmt.Sprintf("SELECT state FROM %s.%s WHERE rule_id = '%s' AND unix_milli <= %d ORDER BY unix_milli DESC LIMIT 1",
-		signozHistoryDBName, ruleStateHistoryTableName, ruleID, params.End)
+		signozHistoryDBName(), ruleStateHistoryTableName, ruleID, params.End)
 	if err := r.db.QueryRow(ctx, stateQuery).Scan(&state); err != nil {
 		if err != sql.ErrNoRows {
 			return nil, err
@@ -4808,7 +4828,7 @@ ORDER BY firing_time ASC;`
 				unix_milli
 			FROM %s.%s
 			WHERE rule_id = '%s' AND overall_state_changed = true AND overall_state = '%s' AND unix_milli <= %d
-			ORDER BY unix_milli DESC LIMIT 1`, signozHistoryDBName, ruleStateHistoryTableName, ruleID, model.StateFiring.String(), params.End)
+			ORDER BY unix_milli DESC LIMIT 1`, signozHistoryDBName(), ruleStateHistoryTableName, ruleID, model.StateFiring.String(), params.End)
 			if err := r.db.QueryRow(ctx, firingQuery).Scan(&firingTime); err != nil {
 				return nil, err
 			}
@@ -4873,8 +4893,8 @@ FROM matched_events;
 `
 
 	query := fmt.Sprintf(tmpl,
-		signozHistoryDBName, ruleStateHistoryTableName, ruleID, params.Start, params.End,
-		signozHistoryDBName, ruleStateHistoryTableName, ruleID, params.Start, params.End)
+		signozHistoryDBName(), ruleStateHistoryTableName, ruleID, params.Start, params.End,
+		signozHistoryDBName(), ruleStateHistoryTableName, ruleID, params.Start, params.End)
 
 	r.logger.Debug("avg resolution time query", "query", query)
 	var avgResolutionTime float64
@@ -4931,8 +4951,8 @@ GROUP BY ts
 ORDER BY ts ASC;`
 
 	query := fmt.Sprintf(tmpl,
-		signozHistoryDBName, ruleStateHistoryTableName, ruleID, params.Start, params.End,
-		signozHistoryDBName, ruleStateHistoryTableName, ruleID, params.Start, params.End, step)
+		signozHistoryDBName(), ruleStateHistoryTableName, ruleID, params.Start, params.End,
+		signozHistoryDBName(), ruleStateHistoryTableName, ruleID, params.Start, params.End, step)
 
 	r.logger.Debug("avg resolution time by interval query", "query", query)
 	result, err := r.GetTimeSeriesResultV3(ctx, query)
@@ -4949,7 +4969,7 @@ func (r *ClickHouseReader) GetTotalTriggers(ctx context.Context, ruleID string, 
 		instrumentationtypes.CodeFunctionName: "GetTotalTriggers",
 	})
 	query := fmt.Sprintf("SELECT count(*) FROM %s.%s WHERE rule_id = '%s' AND (state_changed = true) AND (state = '%s') AND unix_milli >= %d AND unix_milli <= %d",
-		signozHistoryDBName, ruleStateHistoryTableName, ruleID, model.StateFiring.String(), params.Start, params.End)
+		signozHistoryDBName(), ruleStateHistoryTableName, ruleID, model.StateFiring.String(), params.Start, params.End)
 
 	var totalTriggers uint64
 
@@ -4965,7 +4985,7 @@ func (r *ClickHouseReader) GetTriggersByInterval(ctx context.Context, ruleID str
 	step := common.MinAllowedStepInterval(params.Start, params.End)
 
 	query := fmt.Sprintf("SELECT count(*), toStartOfInterval(toDateTime(intDiv(unix_milli, 1000)), INTERVAL %d SECOND) as ts FROM %s.%s WHERE rule_id = '%s' AND (state_changed = true) AND (state = '%s') AND unix_milli >= %d AND unix_milli <= %d GROUP BY ts ORDER BY ts ASC",
-		step, signozHistoryDBName, ruleStateHistoryTableName, ruleID, model.StateFiring.String(), params.Start, params.End)
+		step, signozHistoryDBName(), ruleStateHistoryTableName, ruleID, model.StateFiring.String(), params.Start, params.End)
 
 	result, err := r.GetTimeSeriesResultV3(ctx, query)
 	if err != nil || len(result) == 0 {
@@ -5053,7 +5073,7 @@ func (r *ClickHouseReader) UpdateMetricsMetadata(ctx context.Context, orgID valu
 
 	// Insert new metadata (keeping history of all updates)
 	insertQuery := fmt.Sprintf(`INSERT INTO %s.%s (metric_name, temporality, is_monotonic, type, description, unit, created_at)
-VALUES ( ?, ?, ?, ?, ?, ?, ?);`, signozMetricDBName, signozUpdatedMetricsMetadataTable)
+VALUES ( ?, ?, ?, ?, ?, ?, ?);`, signozMetricDBName(), signozUpdatedMetricsMetadataTable)
 	valueCtx := context.WithValue(ctx, "clickhouse_max_threads", constants.MetricsExplorerClickhouseThreads)
 	err := r.db.Exec(valueCtx, insertQuery, req.MetricName, req.Temporality, req.IsMonotonic, req.MetricType, req.Description, req.Unit, req.CreatedAt.UnixMilli())
 	if err != nil {
@@ -5093,7 +5113,7 @@ func (r *ClickHouseReader) CheckForLabelsInMetric(ctx context.Context, orgID val
             UNION ALL
             SELECT 1 FROM %s.%s WHERE %s
         )
-        LIMIT 1`, signozMetricDBName, signozTSTableNameV41Day, conditions, signozMetricDBName, signozTSTableNameV4Reduced, conditions)
+        LIMIT 1`, signozMetricDBName(), signozTSTableNameV41Day, conditions, signozMetricDBName(), signozTSTableNameV4Reduced, conditions)
 
 		args = make([]interface{}, 0, (len(labels)+1)*2)
 		for i := 0; i < 2; i++ {
@@ -5107,7 +5127,7 @@ func (r *ClickHouseReader) CheckForLabelsInMetric(ctx context.Context, orgID val
         SELECT count(*) > 0 as has_le
         FROM %s.%s
         WHERE %s
-        LIMIT 1`, signozMetricDBName, signozTSTableNameV41Day, conditions)
+        LIMIT 1`, signozMetricDBName(), signozTSTableNameV41Day, conditions)
 
 		args = make([]interface{}, 0, len(labels)+1)
 		args = append(args, metricName)
@@ -5163,7 +5183,7 @@ func (r *ClickHouseReader) GetUpdatedMetricsMetadata(ctx context.Context, orgID 
 					FROM %s.%s
 					WHERE metric_name IN (%s)
 					GROUP BY metric_name;`,
-			signozMetricDBName,
+			signozMetricDBName(),
 			signozUpdatedMetricsMetadataTable,
 			metricList)
 
@@ -5215,11 +5235,11 @@ func (r *ClickHouseReader) GetUpdatedMetricsMetadata(ctx context.Context, orgID 
 				SELECT metric_name, type, description, temporality, is_monotonic, unit FROM %s.%s WHERE metric_name IN (%s)
 				UNION ALL
 				SELECT metric_name, type, description, temporality, is_monotonic, unit FROM %s.%s WHERE metric_name IN (%s)
-			)`, signozMetricDBName, signozTSTableNameV4, metricList, signozMetricDBName, signozTSTableNameV4Reduced, metricList)
+			)`, signozMetricDBName(), signozTSTableNameV4, metricList, signozMetricDBName(), signozTSTableNameV4Reduced, metricList)
 		} else {
 			query = fmt.Sprintf(`SELECT DISTINCT metric_name, type, description, temporality, is_monotonic, unit
 			FROM %s.%s
-			WHERE metric_name IN (%s)`, signozMetricDBName, signozTSTableNameV4, metricList)
+			WHERE metric_name IN (%s)`, signozMetricDBName(), signozTSTableNameV4, metricList)
 		}
 		valueCtx := context.WithValue(ctx, "clickhouse_max_threads", constants.MetricsExplorerClickhouseThreads)
 		rows, err := r.db.Query(valueCtx, query)

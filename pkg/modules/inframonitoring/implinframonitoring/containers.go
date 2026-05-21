@@ -398,7 +398,7 @@ func (m *module) getPerGroupContainerStatusCounts(
 		)
 	}
 	stateFps.Select(stateFpsCols...)
-	stateFps.From(fmt.Sprintf("%s.%s", metricstelemetryschema.DBName, localTimeSeriesTable))
+	stateFps.From(fmt.Sprintf("%s.%s", metricstelemetryschema.DBName(), localTimeSeriesTable))
 	stateFps.Where(
 		stateFps.E("metric_name", containerStatusStateMetricName),
 		stateFps.GE("unix_milli", tsAdjustedStart),
@@ -430,7 +430,7 @@ func (m *module) getPerGroupContainerStatusCounts(
 	containerState.Select(containerStateCols...)
 	containerState.From(fmt.Sprintf(
 		"%s.%s AS samples INNER JOIN state_fps AS fps ON samples.fingerprint = fps.fingerprint",
-		metricstelemetryschema.DBName, distributedSamplesTable,
+		metricstelemetryschema.DBName(), distributedSamplesTable,
 	))
 	containerState.Where(
 		containerState.E("samples.metric_name", containerStatusStateMetricName),
@@ -449,7 +449,7 @@ func (m *module) getPerGroupContainerStatusCounts(
 		fmt.Sprintf("JSONExtractString(labels, %s) AS container_name", reasonFps.Var(containerNameAttrKey)),
 		fmt.Sprintf("JSONExtractString(labels, %s) AS reason", reasonFps.Var(containerStatusReasonAttrKey)),
 	)
-	reasonFps.From(fmt.Sprintf("%s.%s", metricstelemetryschema.DBName, localTimeSeriesTable))
+	reasonFps.From(fmt.Sprintf("%s.%s", metricstelemetryschema.DBName(), localTimeSeriesTable))
 	reasonFps.Where(
 		reasonFps.E("metric_name", containerStatusReasonMetricName),
 		reasonFps.GE("unix_milli", tsAdjustedStart),
@@ -479,7 +479,7 @@ func (m *module) getPerGroupContainerStatusCounts(
 	)
 	reasonInner.From(fmt.Sprintf(
 		"%s.%s AS samples INNER JOIN reason_fps AS fps ON samples.fingerprint = fps.fingerprint",
-		metricstelemetryschema.DBName, distributedSamplesTable,
+		metricstelemetryschema.DBName(), distributedSamplesTable,
 	))
 	reasonInner.Where(
 		reasonInner.E("samples.metric_name", containerStatusReasonMetricName),
@@ -664,7 +664,7 @@ func (m *module) getPerGroupContainerRestartCounts(
 		)
 	}
 	restartFps.Select(restartFpsCols...)
-	restartFps.From(fmt.Sprintf("%s.%s", metricstelemetryschema.DBName, localTimeSeriesTable))
+	restartFps.From(fmt.Sprintf("%s.%s", metricstelemetryschema.DBName(), localTimeSeriesTable))
 	restartFps.Where(
 		restartFps.E("metric_name", containerRestartsMetricName),
 		restartFps.GE("unix_milli", tsAdjustedStart),
@@ -694,7 +694,7 @@ func (m *module) getPerGroupContainerRestartCounts(
 	containerRestarts.Select(containerRestartsCols...)
 	containerRestarts.From(fmt.Sprintf(
 		"%s.%s AS samples INNER JOIN restart_fps AS fps ON samples.fingerprint = fps.fingerprint",
-		metricstelemetryschema.DBName, distributedSamplesTable,
+		metricstelemetryschema.DBName(), distributedSamplesTable,
 	))
 	containerRestarts.Where(
 		containerRestarts.E("samples.metric_name", containerRestartsMetricName),
@@ -808,7 +808,7 @@ func (m *module) getPerGroupContainerReadyCounts(
 		)
 	}
 	readyFps.Select(readyFpsCols...)
-	readyFps.From(fmt.Sprintf("%s.%s", metricstelemetryschema.DBName, localTimeSeriesTable))
+	readyFps.From(fmt.Sprintf("%s.%s", metricstelemetryschema.DBName(), localTimeSeriesTable))
 	readyFps.Where(
 		readyFps.E("metric_name", containerReadyMetricName),
 		readyFps.GE("unix_milli", tsAdjustedStart),
@@ -838,7 +838,7 @@ func (m *module) getPerGroupContainerReadyCounts(
 	containerReady.Select(containerReadyCols...)
 	containerReady.From(fmt.Sprintf(
 		"%s.%s AS samples INNER JOIN ready_fps AS fps ON samples.fingerprint = fps.fingerprint",
-		metricstelemetryschema.DBName, distributedSamplesTable,
+		metricstelemetryschema.DBName(), distributedSamplesTable,
 	))
 	containerReady.Where(
 		containerReady.E("samples.metric_name", containerReadyMetricName),

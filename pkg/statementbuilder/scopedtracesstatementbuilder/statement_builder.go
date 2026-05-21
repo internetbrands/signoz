@@ -80,7 +80,7 @@ func NewScopedTraceStatementBuilder(
 
 	resourceFilterStmtBuilder := resourcefilter.New[qbtypes.TraceAggregation](
 		settings,
-		tracestelemetryschema.DBName,
+		tracestelemetryschema.DBName(),
 		tracestelemetryschema.TracesResourceV3TableName,
 		telemetrytypes.SignalTraces,
 		telemetrytypes.SourceUnspecified,
@@ -530,7 +530,7 @@ func (b *scopedTraceStatementBuilder) buildMatchedCTE(sb *sqlbuilder.SelectBuild
 		selects = append(selects, rc.expr+" AS "+quoteAlias(rc.alias))
 	}
 	sb.Select(selects...)
-	sb.From(fmt.Sprintf("%s.%s", tracestelemetryschema.DBName, tracestelemetryschema.SpanIndexV3TableName))
+	sb.From(fmt.Sprintf("%s.%s", tracestelemetryschema.DBName(), tracestelemetryschema.SpanIndexV3TableName))
 
 	// prune widened by the span filter so its spans survive for the countIf below
 	prune := "(" + maskExpr
@@ -580,7 +580,7 @@ func (b *scopedTraceStatementBuilder) buildMatchedCTE(sb *sqlbuilder.SelectBuild
 func (b *scopedTraceStatementBuilder) buildRankedCTE(start, end uint64) (string, []any) {
 	sb := sqlbuilder.NewSelectBuilder()
 	sb.Select("trace_id", "min(start) AS t_start", "max(end) AS t_end")
-	sb.From(fmt.Sprintf("%s.%s", tracestelemetryschema.DBName, tracestelemetryschema.TraceSummaryTableName))
+	sb.From(fmt.Sprintf("%s.%s", tracestelemetryschema.DBName(), tracestelemetryschema.TraceSummaryTableName))
 	sb.Where(
 		"trace_id GLOBAL IN (SELECT trace_id FROM matched)",
 		"end >= fromUnixTimestamp64Nano("+sb.Var(start)+")",
@@ -603,7 +603,7 @@ func (b *scopedTraceStatementBuilder) buildEnrichmentSelect(sb *sqlbuilder.Selec
 		selects = append(selects, rc.expr+" AS "+quoteAlias(rc.alias))
 	}
 	sb.Select(selects...)
-	sb.From(fmt.Sprintf("%s.%s", tracestelemetryschema.DBName, tracestelemetryschema.SpanIndexV3TableName))
+	sb.From(fmt.Sprintf("%s.%s", tracestelemetryschema.DBName(), tracestelemetryschema.SpanIndexV3TableName))
 	sb.Where(
 		"ts_bucket_start GLOBAL IN (SELECT ts_bucket FROM buckets)",
 		"trace_id GLOBAL IN (SELECT trace_id FROM ranked)",

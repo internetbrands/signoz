@@ -128,8 +128,22 @@ var auditLogColumns = map[string]*schema.Column{
 	"scope_string":         {Name: "scope_string", Type: schema.MapColumnType{KeyType: schema.LowCardinalityColumnType{ElementType: schema.ColumnTypeString}, ValueType: schema.ColumnTypeString}},
 }
 
+var dbName string
+
+func Init(databaseName string) {
+	if databaseName != "" {
+		dbName = databaseName
+	}
+}
+
+func DBName() string {
+	if dbName != "" {
+		return dbName
+	}
+	return "signoz_audit"
+}
+
 const (
-	DBName                      = "signoz_audit"
 	AuditLogsTableName          = "distributed_logs"
 	AuditLogsLocalTableName     = "logs"
 	TagAttributesTableName      = "distributed_tag_attributes"

@@ -168,7 +168,7 @@ func (b *meterQueryStatementBuilder) buildTemporalAggDeltaFastPath(
 	}
 
 	sb.SelectMore(fmt.Sprintf("%s AS value", aggCol))
-	sb.From(fmt.Sprintf("%s.%s AS points", metertelemetryschema.DBName, tbl))
+	sb.From(fmt.Sprintf("%s.%s AS points", metertelemetryschema.DBName(), tbl))
 	sb.Where(
 		sb.In("metric_name", query.Aggregations[0].MetricName),
 		sb.GTE("unix_milli", start),
@@ -259,7 +259,7 @@ func (b *meterQueryStatementBuilder) buildTemporalAggDelta(
 
 	sb.SelectMore(fmt.Sprintf("%s AS per_series_value", aggCol))
 
-	sb.From(fmt.Sprintf("%s.%s AS points", metertelemetryschema.DBName, tbl))
+	sb.From(fmt.Sprintf("%s.%s AS points", metertelemetryschema.DBName(), tbl))
 	sb.Where(
 		sb.In("metric_name", query.Aggregations[0].MetricName),
 		sb.GTE("unix_milli", start),
@@ -332,7 +332,7 @@ func (b *meterQueryStatementBuilder) buildTemporalAggCumulativeOrUnspecified(
 	}
 	baseSb.SelectMore(fmt.Sprintf("%s AS per_series_value", aggCol))
 
-	baseSb.From(fmt.Sprintf("%s.%s AS points", metertelemetryschema.DBName, tbl))
+	baseSb.From(fmt.Sprintf("%s.%s AS points", metertelemetryschema.DBName(), tbl))
 	baseSb.Where(
 		baseSb.In("metric_name", query.Aggregations[0].MetricName),
 		baseSb.GTE("unix_milli", start),

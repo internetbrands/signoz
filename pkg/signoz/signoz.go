@@ -124,6 +124,11 @@ func newQueryStack(
 	querier.BucketCache,
 	error,
 ) {
+	// telemetrymetadata.Init lives here rather than in clickhousetelemetrystore's
+	// provider constructor to avoid an import cycle: telemetrymetadata's own
+	// tests pull in telemetrystoretest, which imports clickhousetelemetrystore.
+	telemetrymetadata.Init(config.TelemetryStore.Clickhouse.MetadataDatabase)
+
 	metadataStore := telemetrymetadata.NewTelemetryMetaStore(settings, telemetryStore, fl)
 
 	cfg := config.Querier.Config

@@ -139,7 +139,7 @@ func seriesLookupQuery(query *prompb.Query, subQuery bool) (*sqlbuilder.SelectBu
 	}
 
 	start, end, tableName := getStartAndEndAndTableName(query.StartTimestampMs, query.EndTimestampMs)
-	sb.From(databaseName + "." + tableName)
+	sb.From(databaseName() + "." + tableName)
 
 	sb.Where("temporality IN ['Cumulative', 'Unspecified']")
 	// Inclusive upper bound: registration rows are hour-floored by the
@@ -242,7 +242,7 @@ func (client *client) getFingerprintsFromClickhouseQuery(ctx context.Context, qu
 func buildSamplesQuery(start int64, end int64, metricNames []string, sub *sqlbuilder.SelectBuilder) (string, []any) {
 	sb := sqlbuilder.NewSelectBuilder()
 	sb.Select("metric_name", "fingerprint", "unix_milli", "value", "flags")
-	sb.From(databaseName + "." + distributedSamplesV4)
+	sb.From(databaseName() + "." + distributedSamplesV4)
 
 	if len(metricNames) > 0 {
 		names := make([]any, len(metricNames))

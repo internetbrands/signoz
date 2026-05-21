@@ -80,7 +80,7 @@ func NewTraceQueryStatementBuilder(
 
 	resourceFilterResolver := resourcefilter.NewResolver[qbtypes.TraceAggregation](
 		settings,
-		tracestelemetryschema.DBName,
+		tracestelemetryschema.DBName(),
 		tracestelemetryschema.TracesResourceV3TableName,
 		telemetrytypes.SignalTraces,
 		telemetrytypes.SourceUnspecified,
@@ -392,7 +392,7 @@ func (b *traceQueryStatementBuilder) buildListQuery(
 	}
 
 	// From table
-	sb.From(fmt.Sprintf("%s.%s", tracestelemetryschema.DBName, tracestelemetryschema.SpanIndexV3TableName))
+	sb.From(fmt.Sprintf("%s.%s", tracestelemetryschema.DBName(), tracestelemetryschema.SpanIndexV3TableName))
 
 	// Add filter conditions
 	preparedWhereClause, err := b.addFilterCondition(ctx, orgID, sb, start, end, query, keys, variables, skipResourceFilter)
@@ -450,7 +450,7 @@ func (b *traceQueryStatementBuilder) buildTraceQuery(
 
 	distSB := sqlbuilder.NewSelectBuilder()
 	distSB.Select("trace_id")
-	distSB.From(fmt.Sprintf("%s.%s", tracestelemetryschema.DBName, tracestelemetryschema.SpanIndexV3TableName))
+	distSB.From(fmt.Sprintf("%s.%s", tracestelemetryschema.DBName(), tracestelemetryschema.SpanIndexV3TableName))
 
 	var (
 		cteFragments []string
@@ -480,7 +480,7 @@ func (b *traceQueryStatementBuilder) buildTraceQuery(
 	// Build the inner subquery for root spans
 	innerSB := sqlbuilder.NewSelectBuilder()
 	innerSB.Select("trace_id", "duration_nano", sqlbuilder.Escape("resource_string_service$$name as `service.name`"), "name")
-	innerSB.From(fmt.Sprintf("%s.%s", tracestelemetryschema.DBName, tracestelemetryschema.SpanIndexV3TableName))
+	innerSB.From(fmt.Sprintf("%s.%s", tracestelemetryschema.DBName(), tracestelemetryschema.SpanIndexV3TableName))
 	innerSB.Where("parent_span_id = ''")
 
 	// this only helps when there is a filter
@@ -615,7 +615,7 @@ func (b *traceQueryStatementBuilder) buildTimeSeriesQuery(
 		sb.SelectMore(fmt.Sprintf("%s AS __result_%d", rewritten, i))
 	}
 
-	sb.From(fmt.Sprintf("%s.%s", tracestelemetryschema.DBName, tracestelemetryschema.SpanIndexV3TableName))
+	sb.From(fmt.Sprintf("%s.%s", tracestelemetryschema.DBName(), tracestelemetryschema.SpanIndexV3TableName))
 	preparedWhereClause, err := b.addFilterCondition(ctx, orgID, sb, start, end, query, keys, variables, skipResourceFilter)
 	if err != nil {
 		return nil, err
@@ -784,7 +784,7 @@ func (b *traceQueryStatementBuilder) buildScalarQuery(
 	}
 
 	// From table
-	sb.From(fmt.Sprintf("%s.%s", tracestelemetryschema.DBName, tracestelemetryschema.SpanIndexV3TableName))
+	sb.From(fmt.Sprintf("%s.%s", tracestelemetryschema.DBName(), tracestelemetryschema.SpanIndexV3TableName))
 
 	// Add filter conditions
 	preparedWhereClause, err := b.addFilterCondition(ctx, orgID, sb, start, end, query, keys, variables, skipResourceFilter)
