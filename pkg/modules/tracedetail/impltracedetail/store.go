@@ -9,6 +9,7 @@ import (
 	sqlbuilder "github.com/huandu/go-sqlbuilder"
 
 	"github.com/SigNoz/signoz/pkg/errors"
+	"github.com/SigNoz/signoz/pkg/telemetryschema/tracestelemetryschema"
 	"github.com/SigNoz/signoz/pkg/telemetrystore"
 	"github.com/SigNoz/signoz/pkg/types/spantypes"
 	"github.com/SigNoz/signoz/pkg/types/telemetrytypes"
@@ -46,7 +47,7 @@ func NewTraceStore(ts telemetrystore.TelemetryStore) *traceStore {
 func (s *traceStore) GetTraceSummary(ctx context.Context, traceID string) (*spantypes.TraceSummary, error) {
 	sb := sqlbuilder.NewSelectBuilder()
 	sb.Select("trace_id", "min(start) AS start", "max(end) AS end", "sum(num_spans) AS num_spans")
-	sb.From(fmt.Sprintf("%s.%s", spantypes.TraceDB, spantypes.TraceSummaryTable))
+	sb.From(fmt.Sprintf("%s.%s", tracestelemetryschema.DBName(), spantypes.TraceSummaryTable))
 	sb.Where(sb.E("trace_id", traceID))
 	sb.GroupBy("trace_id")
 	query, args := sb.BuildWithFlavor(sqlbuilder.ClickHouse)
@@ -78,7 +79,7 @@ func (s *traceStore) GetTraceSpans(ctx context.Context, traceID string, summary 
 		FROM %s.%s
 		WHERE trace_id=? AND ts_bucket_start>=? AND ts_bucket_start<=?
 		ORDER BY timestamp ASC, name ASC`,
-		spantypes.TraceDB, spantypes.TraceTable,
+		tracestelemetryschema.DBName(), spantypes.TraceTable,
 	)
 	var spanItems []spantypes.StorableSpan
 	err := s.telemetryStore.ClickhouseDB().Select(
@@ -100,7 +101,7 @@ func (s *traceStore) GetMinimalSpans(ctx context.Context, traceID string, start,
 		"parent_span_id", "timestamp", "duration_nano", "has_error",
 		colServiceName,
 	)
-	sb.From(fmt.Sprintf("%s.%s", spantypes.TraceDB, spantypes.TraceTable))
+	sb.From(fmt.Sprintf("%s.%s", tracestelemetryschema.DBName(), spantypes.TraceTable))
 	sb.Where(
 		sb.E("trace_id", traceID),
 		sb.GE("ts_bucket_start", start.Unix()-1800),
@@ -132,7 +133,7 @@ func (s *traceStore) GetTraceSpansByIDs(ctx context.Context, traceID string, sta
 		"db_name", "db_operation", "http_method", "http_url", "http_host",
 		"external_http_method", "external_http_url", "response_status_code", "links as references",
 	)
-	sb.From(fmt.Sprintf("%s.%s", spantypes.TraceDB, spantypes.TraceTable))
+	sb.From(fmt.Sprintf("%s.%s", tracestelemetryschema.DBName(), spantypes.TraceTable))
 	ids := make([]any, len(spanIDs))
 	for i, id := range spanIDs {
 		ids[i] = id
@@ -169,7 +170,7 @@ func (s *traceStore) GetFlamegraphSpans(ctx context.Context, traceID string, sta
 		"any(attributes_bool) AS attributes_bool",
 		"any(resources_string) AS resources_string",
 	)
-	sb.From(fmt.Sprintf("%s.%s", spantypes.TraceDB, spantypes.TraceTable))
+	sb.From(fmt.Sprintf("%s.%s", tracestelemetryschema.DBName(), spantypes.TraceTable))
 	conditions := []string{
 		sb.E("trace_id", traceID),
 		sb.GE("ts_bucket_start", start.Unix()-1800),
@@ -202,7 +203,7 @@ func (s *traceStore) GetSpanCountByField(ctx context.Context, traceID string, su
 	}
 	sb := sqlbuilder.NewSelectBuilder()
 	sb.Select(fieldExpr+" AS field_value", "count(DISTINCT span_id) AS count")
-	sb.From(fmt.Sprintf("%s.%s", spantypes.TraceDB, spantypes.TraceTable))
+	sb.From(fmt.Sprintf("%s.%s", tracestelemetryschema.DBName(), spantypes.TraceTable))
 	sb.Where(
 		sb.E("trace_id", traceID),
 		sb.GE("ts_bucket_start", summary.Start.Unix()-1800),
@@ -236,7 +237,7 @@ func (s *traceStore) GetSpanDurationByField(ctx context.Context, traceID string,
 		"toUnixTimestamp64Nano(timestamp) AS start_ns",
 		"start_ns + duration_nano AS end_ns",
 	)
-	allSpansSB.From(fmt.Sprintf("%s.%s", spantypes.TraceDB, spantypes.TraceTable))
+	allSpansSB.From(fmt.Sprintf("%s.%s", tracestelemetryschema.DBName(), spantypes.TraceTable))
 	allSpansSB.Where(
 		allSpansSB.E("trace_id", traceID),
 		allSpansSB.GE("ts_bucket_start", summary.Start.Unix()-1800),

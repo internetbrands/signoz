@@ -108,7 +108,7 @@ func (m *module) createIndexes(ctx context.Context, indexes []schemamigrator.Ind
 
 	for _, index := range indexes {
 		alterStmt := schemamigrator.AlterTableAddIndex{
-			Database: logstelemetryschema.DBName,
+			Database: logstelemetryschema.DBName(),
 			Table:    logstelemetryschema.LogsV2LocalTableName,
 			Index:    index,
 		}

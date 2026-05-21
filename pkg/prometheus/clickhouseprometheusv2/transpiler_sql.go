@@ -89,7 +89,7 @@ func buildUnitSQL(unit *coreUnit, metricNames []string, dataStart, dataEnd int64
 			}
 		}
 		sub.Select(selects...)
-		sub.From(fmt.Sprintf("%s.%s", metricstelemetryschema.DBName, table))
+		sub.From(fmt.Sprintf("%s.%s", metricstelemetryschema.DBName(), table))
 		if err := applySeriesConditions(sub, adjustedTsStart, dataEnd, unit.matchers); err != nil {
 			return "", nil, err
 		}
@@ -167,7 +167,7 @@ func buildUnitSQL(unit *coreUnit, metricNames []string, dataStart, dataEnd int64
 			selects = append(selects, fmt.Sprintf("any(series.%s) AS %s", col, col))
 		}
 		sb.Select(append(selects, gridExpr+" AS grid")...)
-		sb.From(fmt.Sprintf("%s.%s AS points", metricstelemetryschema.DBName, metricstelemetryschema.SamplesV4TableName))
+		sb.From(fmt.Sprintf("%s.%s AS points", metricstelemetryschema.DBName(), metricstelemetryschema.SamplesV4TableName))
 		sb.JoinWithOption(sqlbuilder.InnerJoin, fmt.Sprintf("(%s) AS series", seriesSQL), "points.fingerprint = series.fingerprint")
 		samplesConditions(sb, excludeStale)
 		sb.GroupBy("points.fingerprint")
@@ -350,7 +350,7 @@ func windowedInner(unit *coreUnit, samplesConditions func(*sqlbuilder.SelectBuil
 		}[unit.overFn], bucketLen, jj))
 	}
 	buckets.Select(selects...)
-	buckets.From(fmt.Sprintf("%s.%s AS points", metricstelemetryschema.DBName, metricstelemetryschema.SamplesV4TableName))
+	buckets.From(fmt.Sprintf("%s.%s AS points", metricstelemetryschema.DBName(), metricstelemetryschema.SamplesV4TableName))
 	buckets.JoinWithOption(sqlbuilder.InnerJoin, fmt.Sprintf("(%s) AS series", seriesSQL), "points.fingerprint = series.fingerprint")
 	samplesConditions(buckets, true)
 	buckets.GroupBy("points.fingerprint")

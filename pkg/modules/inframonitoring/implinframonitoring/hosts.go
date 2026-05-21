@@ -73,7 +73,7 @@ func (m *module) getPerGroupHostStatusCounts(
 
 		rawSrc := sqlbuilder.NewSelectBuilder()
 		rawSrc.Select("labels")
-		rawSrc.From(fmt.Sprintf("%s.%s", metricstelemetryschema.DBName, distributedTimeSeriesTableName))
+		rawSrc.From(fmt.Sprintf("%s.%s", metricstelemetryschema.DBName(), distributedTimeSeriesTableName))
 		rawSrc.Where(
 			rawSrc.In("metric_name", sqlbuilder.List(metricNames)),
 			rawSrc.GE("unix_milli", tsAdjustedStartMs),
@@ -86,7 +86,7 @@ func (m *module) getPerGroupHostStatusCounts(
 
 		reducedSrc := sqlbuilder.NewSelectBuilder()
 		reducedSrc.Select("labels")
-		reducedSrc.From(fmt.Sprintf("%s.%s", metricstelemetryschema.DBName, metricstelemetryschema.TimeseriesV4ReducedTableName))
+		reducedSrc.From(fmt.Sprintf("%s.%s", metricstelemetryschema.DBName(), metricstelemetryschema.TimeseriesV4ReducedTableName))
 		reducedSrc.Where(
 			reducedSrc.In("metric_name", sqlbuilder.List(metricNames)),
 			reducedSrc.GE("unix_milli", tsAdjustedStartMs),
@@ -102,7 +102,7 @@ func (m *module) getPerGroupHostStatusCounts(
 
 		fpSB := m.buildSamplesTblFingerprintSubQuery(metricNames, localSamplesTable, samplesStartMs, flooredEndMs)
 
-		sb.From(fmt.Sprintf("%s.%s", metricstelemetryschema.DBName, distributedTimeSeriesTableName))
+		sb.From(fmt.Sprintf("%s.%s", metricstelemetryschema.DBName(), distributedTimeSeriesTableName))
 		sb.Where(
 			sb.In("metric_name", sqlbuilder.List(metricNames)),
 			sb.GE("unix_milli", tsAdjustedStartMs),
@@ -387,7 +387,7 @@ func (m *module) getActiveHostsQuery(metricNames []string, hostNameAttr string, 
 	sb := sqlbuilder.NewSelectBuilder()
 	sb.Distinct()
 	sb.Select("attr_string_value")
-	sb.From(fmt.Sprintf("%s.%s", metricstelemetryschema.DBName, metricstelemetryschema.AttributesMetadataTableName))
+	sb.From(fmt.Sprintf("%s.%s", metricstelemetryschema.DBName(), metricstelemetryschema.AttributesMetadataTableName))
 	sb.Where(
 		sb.In("metric_name", sqlbuilder.List(metricNames)),
 		sb.E("attr_name", hostNameAttr),

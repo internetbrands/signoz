@@ -39,7 +39,7 @@ func (m *module) FetchTopLevelOperations(ctx context.Context, start time.Time, s
 	ctx = m.withServicesContext(ctx, "FetchTopLevelOperations")
 
 	db := m.TelemetryStore.ClickhouseDB()
-	query := fmt.Sprintf("SELECT name, serviceName, max(time) as ts FROM %s.%s WHERE time >= @start", tracestelemetryschema.DBName, tracestelemetryschema.TopLevelOperationsTableName)
+	query := fmt.Sprintf("SELECT name, serviceName, max(time) as ts FROM %s.%s WHERE time >= @start", tracestelemetryschema.DBName(), tracestelemetryschema.TopLevelOperationsTableName)
 	args := []any{clickhouse.Named("start", start)}
 	if len(services) > 0 {
 		query += " AND serviceName IN @services"

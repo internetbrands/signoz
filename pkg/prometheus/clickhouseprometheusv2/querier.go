@@ -61,7 +61,7 @@ func (q *querier) LabelValues(ctx context.Context, name string, hints *storage.L
 		sb.Select(fmt.Sprintf("DISTINCT JSONExtractString(labels, %s) AS value", sb.Var(name)))
 	}
 	adjustedStart, _, table, _ := metricstelemetryschema.WhichTSTableToUse(uint64(q.mint), uint64(q.maxt), false, nil)
-	sb.From(fmt.Sprintf("%s.%s", metricstelemetryschema.DBName, table))
+	sb.From(fmt.Sprintf("%s.%s", metricstelemetryschema.DBName(), table))
 	if err := applySeriesConditions(sb, int64(adjustedStart), q.maxt, matchers); err != nil {
 		return nil, nil, err
 	}
@@ -83,7 +83,7 @@ func (q *querier) LabelNames(ctx context.Context, hints *storage.LabelHints, mat
 	sb := sqlbuilder.NewSelectBuilder()
 	sb.Select("DISTINCT arrayJoin(JSONExtractKeys(labels)) AS name")
 	adjustedStart, _, table, _ := metricstelemetryschema.WhichTSTableToUse(uint64(q.mint), uint64(q.maxt), false, nil)
-	sb.From(fmt.Sprintf("%s.%s", metricstelemetryschema.DBName, table))
+	sb.From(fmt.Sprintf("%s.%s", metricstelemetryschema.DBName(), table))
 	if err := applySeriesConditions(sb, int64(adjustedStart), q.maxt, matchers); err != nil {
 		return nil, nil, err
 	}

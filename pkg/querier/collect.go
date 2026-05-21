@@ -15,9 +15,9 @@ import (
 func (q *querier) Collect(ctx context.Context, _ valuer.UUID) (map[string]any, error) {
 	stats := make(map[string]any)
 
-	tracesTable := fmt.Sprintf("%s.%s", tracestelemetryschema.DBName, tracestelemetryschema.SpanIndexV3TableName)
-	logsTable := fmt.Sprintf("%s.%s", logstelemetryschema.DBName, logstelemetryschema.LogsV2TableName)
-	metricsTable := fmt.Sprintf("%s.%s", metricstelemetryschema.DBName, metricstelemetryschema.SamplesV4TableName)
+	tracesTable := fmt.Sprintf("%s.%s", tracestelemetryschema.DBName(), tracestelemetryschema.SpanIndexV3TableName)
+	logsTable := fmt.Sprintf("%s.%s", logstelemetryschema.DBName(), logstelemetryschema.LogsV2TableName)
+	metricsTable := fmt.Sprintf("%s.%s", metricstelemetryschema.DBName(), metricstelemetryschema.SamplesV4TableName)
 
 	var (
 		traces           uint64

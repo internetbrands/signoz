@@ -88,25 +88,25 @@ func NewTelemetryMetaStore(
 	t := &telemetryMetaStore{
 		logger:                         metadataSettings.Logger(),
 		telemetrystore:                 telemetrystore,
-		tracesDBName:                   tracestelemetryschema.DBName,
+		tracesDBName:                   tracestelemetryschema.DBName(),
 		tracesFieldsTblName:            tracestelemetryschema.TagAttributesV2TableName,
 		spanAttributesKeysTblName:      tracestelemetryschema.SpanAttributesKeysTblName,
 		indexV3TblName:                 tracestelemetryschema.SpanIndexV3TableName,
-		metricsDBName:                  metricstelemetryschema.DBName,
+		metricsDBName:                  metricstelemetryschema.DBName(),
 		metricsFieldsTblName:           metricstelemetryschema.AttributesMetadataTableName,
-		meterDBName:                    metertelemetryschema.DBName,
+		meterDBName:                    metertelemetryschema.DBName(),
 		meterFieldsTblName:             metertelemetryschema.SamplesAgg1dTableName,
-		logsDBName:                     logstelemetryschema.DBName,
+		logsDBName:                     logstelemetryschema.DBName(),
 		logsV2TblName:                  logstelemetryschema.LogsV2TableName,
 		logsFieldsTblName:              logstelemetryschema.TagAttributesV2TableName,
 		logAttributeKeysTblName:        logstelemetryschema.LogAttributeKeysTblName,
 		logResourceKeysTblName:         logstelemetryschema.LogResourceKeysTblName,
-		auditDBName:                    audittelemetryschema.DBName,
+		auditDBName:                    audittelemetryschema.DBName(),
 		auditLogsTblName:               audittelemetryschema.AuditLogsTableName,
 		auditFieldsTblName:             audittelemetryschema.TagAttributesTableName,
 		auditAttributeKeysTblName:      audittelemetryschema.LogAttributeKeysTblName,
 		auditResourceKeysTblName:       audittelemetryschema.LogResourceKeysTblName,
-		relatedMetadataDBName:          DBName,
+		relatedMetadataDBName:          DBName(),
 		relatedMetadataTblName:         AttributesMetadataTableName,
 		columnEvolutionMetadataTblName: ColumnEvolutionMetadataTableName,
 		jsonColumnMetadata: map[telemetrytypes.Signal]map[telemetrytypes.FieldContext]telemetrytypes.JSONColumnMetadata{
@@ -497,7 +497,7 @@ func (t *telemetryMetaStore) getLogsKeys(ctx context.Context, orgID valuer.UUID,
 			fmt.Sprintf("'%s' AS tag_type", telemetrytypes.FieldContextBody.TagType()),
 			"field_data_type AS tag_data_type",
 			fmt.Sprintf("%d AS priority", getPriorityForContext(telemetrytypes.FieldContextBody)),
-		).From(fmt.Sprintf("%s.%s", DBName, FieldKeysTable))
+		).From(fmt.Sprintf("%s.%s", DBName(), FieldKeysTable))
 
 		sb.Where(sb.E("signal", telemetrytypes.SignalLogs.StringValue()))
 		sb.Where(sb.E("field_context", telemetrytypes.FieldContextBody.StringValue()))

@@ -422,7 +422,7 @@ func (b *scopedTraceStatementBuilder) buildPerTraceScan(sb *sqlbuilder.SelectBui
 		selects = append(selects, rc.expr+" AS "+quoteAlias(rc.alias))
 	}
 	sb.Select(selects...)
-	sb.From(fmt.Sprintf("%s.%s", tracestelemetryschema.DBName, tracestelemetryschema.SpanIndexV3TableName))
+	sb.From(fmt.Sprintf("%s.%s", tracestelemetryschema.DBName(), tracestelemetryschema.SpanIndexV3TableName))
 
 	where := []string{
 		sb.GE("timestamp", fmt.Sprintf("%d", start)),

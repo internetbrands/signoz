@@ -484,8 +484,22 @@ var (
 	}
 )
 
+var dbName string
+
+func Init(databaseName string) {
+	if databaseName != "" {
+		dbName = databaseName
+	}
+}
+
+func DBName() string {
+	if dbName != "" {
+		return dbName
+	}
+	return "signoz_traces"
+}
+
 const (
-	DBName                        = "signoz_traces"
 	SpanIndexV3TableName          = "distributed_signoz_index_v3"
 	SpanIndexV3LocalTableName     = "signoz_index_v3"
 	TagAttributesV2TableName      = "distributed_tag_attributes_v2"

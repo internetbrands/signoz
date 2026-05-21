@@ -55,7 +55,7 @@ func (f *TraceTimeRangeFinder) GetTraceTimeRangeMulti(ctx context.Context, trace
 			%s
 		FROM %s.%s
 		WHERE trace_id IN (%s)
-	`, UnixNanoExpr("min(start)"), UnixNanoExpr("max(end)"), DBName, TraceSummaryTableName, strings.Join(placeholders, ", "))
+	`, UnixNanoExpr("min(start)"), UnixNanoExpr("max(end)"), DBName(), TraceSummaryTableName, strings.Join(placeholders, ", "))
 
 	row := f.telemetryStore.ClickhouseDB().QueryRow(ctx, query, args...)
 

@@ -22,7 +22,7 @@ func buildSeriesQuery(start, end int64, matchers []*labels.Matcher) (string, []a
 	adjustedStart, _, table, _ := metricstelemetryschema.WhichTSTableToUse(uint64(start), uint64(end), false, nil)
 	sb := sqlbuilder.NewSelectBuilder()
 	sb.Select("fingerprint", "any(labels)")
-	sb.From(fmt.Sprintf("%s.%s", metricstelemetryschema.DBName, table))
+	sb.From(fmt.Sprintf("%s.%s", metricstelemetryschema.DBName(), table))
 	if err := applySeriesConditions(sb, int64(adjustedStart), end, matchers); err != nil {
 		return "", nil, err
 	}
@@ -50,7 +50,7 @@ func buildSamplesQuery(start, end int64, metricNames []string, matchers []*label
 	} else {
 		sb.Select("fingerprint", "unix_milli", "value", "flags")
 	}
-	sb.From(fmt.Sprintf("%s.%s", metricstelemetryschema.DBName, metricstelemetryschema.SamplesV4TableName))
+	sb.From(fmt.Sprintf("%s.%s", metricstelemetryschema.DBName(), metricstelemetryschema.SamplesV4TableName))
 
 	switch len(metricNames) {
 	case 0:
@@ -66,7 +66,7 @@ func buildSamplesQuery(start, end int64, metricNames []string, matchers []*label
 	sub := sqlbuilder.NewSelectBuilder()
 	sub.Select("fingerprint")
 	adjustedStart, _, _, localTable := metricstelemetryschema.WhichTSTableToUse(uint64(start), uint64(end), false, nil)
-	sub.From(fmt.Sprintf("%s.%s", metricstelemetryschema.DBName, localTable))
+	sub.From(fmt.Sprintf("%s.%s", metricstelemetryschema.DBName(), localTable))
 	if err := applySeriesConditions(sub, int64(adjustedStart), end, matchers); err != nil {
 		return "", nil, err
 	}

@@ -153,7 +153,7 @@ func (provider *Provider) Collect(
 func buildOriginQuery(meterName string) (string, []any) {
 	sb := sqlbuilder.NewSelectBuilder()
 	sb.Select("toInt64(ifNull(min(unix_milli), 0))")
-	sb.From(metertelemetryschema.DBName + "." + metertelemetryschema.SamplesTableName)
+	sb.From(metertelemetryschema.DBName() + "." + metertelemetryschema.SamplesTableName)
 	sb.Where(sb.Equal("metric_name", meterName))
 	return sb.BuildWithFlavor(sqlbuilder.ClickHouse)
 }
@@ -171,7 +171,7 @@ func buildQuery(meterName string, segment *retentiontypes.RetentionPolicySegment
 
 	sb := sqlbuilder.NewSelectBuilder()
 	sb.Select(selects...)
-	sb.From(metertelemetryschema.DBName + "." + metertelemetryschema.SamplesTableName)
+	sb.From(metertelemetryschema.DBName() + "." + metertelemetryschema.SamplesTableName)
 	sb.Where(
 		sb.Equal("metric_name", meterName),
 		sb.GTE("unix_milli", segment.StartMs),

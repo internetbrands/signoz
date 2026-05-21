@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/SigNoz/signoz/pkg/analytics"
 	"github.com/SigNoz/signoz/pkg/querybuilder"
 	"github.com/SigNoz/signoz/pkg/telemetrystore"
 	qbtypes "github.com/SigNoz/signoz/pkg/types/querybuildertypes/querybuildertypesv5"
@@ -18,7 +19,6 @@ import (
 )
 
 const (
-	signozHistoryDBName       = "signoz_analytics"
 	ruleStateHistoryTableName = "distributed_rule_state_history_v0"
 )
 
@@ -560,7 +560,7 @@ func (s *store) buildMatchedEventsCTE(ruleID string, query *rulestatehistorytype
 }
 
 func historyTable() string {
-	return fmt.Sprintf("%s.%s", signozHistoryDBName, ruleStateHistoryTableName)
+	return fmt.Sprintf("%s.%s", analytics.DBName(), ruleStateHistoryTableName)
 }
 
 func minStepSeconds(start, end int64) int64 {

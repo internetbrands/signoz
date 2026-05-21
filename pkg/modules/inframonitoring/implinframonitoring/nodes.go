@@ -308,7 +308,7 @@ func (m *module) getPerGroupNodeConditionCounts(
 		)
 	}
 	timeSeriesFPs.Select(timeSeriesFPsSelectCols...)
-	timeSeriesFPs.From(fmt.Sprintf("%s.%s", metricstelemetryschema.DBName, localTimeSeriesTable))
+	timeSeriesFPs.From(fmt.Sprintf("%s.%s", metricstelemetryschema.DBName(), localTimeSeriesTable))
 	timeSeriesFPs.Where(
 		timeSeriesFPs.E("metric_name", nodeConditionMetricName),
 		timeSeriesFPs.GE("unix_milli", tsAdjustedStartMs),
@@ -345,7 +345,7 @@ func (m *module) getPerGroupNodeConditionCounts(
 	latestConditionPerNode.Select(latestConditionPerNodeSelectCols...)
 	latestConditionPerNode.From(fmt.Sprintf(
 		"%s.%s AS samples INNER JOIN time_series_fps AS tsfp ON samples.fingerprint = tsfp.fingerprint",
-		metricstelemetryschema.DBName, distributedSamplesTable,
+		metricstelemetryschema.DBName(), distributedSamplesTable,
 	))
 	latestConditionPerNode.Where(
 		latestConditionPerNode.E("samples.metric_name", nodeConditionMetricName),

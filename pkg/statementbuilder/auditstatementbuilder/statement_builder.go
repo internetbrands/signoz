@@ -63,7 +63,7 @@ func NewAuditQueryStatementBuilder(
 
 	resourceFilterStmtBuilder := resourcefilter.New[qbtypes.LogAggregation](
 		settings,
-		audittelemetryschema.DBName,
+		audittelemetryschema.DBName(),
 		audittelemetryschema.LogsResourceTableName,
 		telemetrytypes.SignalLogs,
 		telemetrytypes.SourceAudit,
@@ -271,7 +271,7 @@ func (b *auditQueryStatementBuilder) buildListQuery(
 		}
 	}
 
-	sb.From(fmt.Sprintf("%s.%s", audittelemetryschema.DBName, audittelemetryschema.AuditLogsTableName))
+	sb.From(fmt.Sprintf("%s.%s", audittelemetryschema.DBName(), audittelemetryschema.AuditLogsTableName))
 
 	preparedWhereClause, err := b.addFilterCondition(ctx, orgID, sb, start, end, query, keys, variables)
 	if err != nil {
@@ -361,7 +361,7 @@ func (b *auditQueryStatementBuilder) buildTimeSeriesQuery(
 		sb.SelectMore(fmt.Sprintf("%s AS __result_%d", rewritten, i))
 	}
 
-	sb.From(fmt.Sprintf("%s.%s", audittelemetryschema.DBName, audittelemetryschema.AuditLogsTableName))
+	sb.From(fmt.Sprintf("%s.%s", audittelemetryschema.DBName(), audittelemetryschema.AuditLogsTableName))
 
 	preparedWhereClause, err := b.addFilterCondition(ctx, orgID, sb, start, end, query, keys, variables)
 	if err != nil {
@@ -499,7 +499,7 @@ func (b *auditQueryStatementBuilder) buildScalarQuery(
 		}
 	}
 
-	sb.From(fmt.Sprintf("%s.%s", audittelemetryschema.DBName, audittelemetryschema.AuditLogsTableName))
+	sb.From(fmt.Sprintf("%s.%s", audittelemetryschema.DBName(), audittelemetryschema.AuditLogsTableName))
 
 	preparedWhereClause, err := b.addFilterCondition(ctx, orgID, sb, start, end, query, keys, variables)
 	if err != nil {

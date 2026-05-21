@@ -6,8 +6,14 @@ import (
 	chproto "github.com/ClickHouse/ch-go/proto"
 	"github.com/ClickHouse/clickhouse-go/v2"
 	"github.com/ClickHouse/clickhouse-go/v2/lib/driver"
+	"github.com/SigNoz/signoz/pkg/analytics"
 	"github.com/SigNoz/signoz/pkg/errors"
 	"github.com/SigNoz/signoz/pkg/factory"
+	"github.com/SigNoz/signoz/pkg/telemetryschema/audittelemetryschema"
+	"github.com/SigNoz/signoz/pkg/telemetryschema/logstelemetryschema"
+	"github.com/SigNoz/signoz/pkg/telemetryschema/metertelemetryschema"
+	"github.com/SigNoz/signoz/pkg/telemetryschema/metricstelemetryschema"
+	"github.com/SigNoz/signoz/pkg/telemetryschema/tracestelemetryschema"
 	"github.com/SigNoz/signoz/pkg/telemetrystore"
 	"github.com/SigNoz/signoz/pkg/types/telemetrystoretypes"
 	"go.opentelemetry.io/otel/metric"
@@ -89,6 +95,16 @@ func NewFactory(hookFactories ...factory.ProviderFactory[telemetrystore.Telemetr
 
 func New(ctx context.Context, providerSettings factory.ProviderSettings, config telemetrystore.Config, hookFactories ...factory.ProviderFactory[telemetrystore.TelemetryStoreHook, telemetrystore.Config]) (telemetrystore.TelemetryStore, error) {
 	settings := factory.NewScopedProviderSettings(providerSettings, "github.com/SigNoz/signoz/pkg/telemetrystore/clickhousetelemetrystore")
+
+	// Initialize database names from config. telemetrymetadata.Init is called
+	// from newQueryStack instead, to avoid an import cycle through
+	// telemetrystoretest.
+	tracestelemetryschema.Init(config.Clickhouse.TraceDatabase)
+	metricstelemetryschema.Init(config.Clickhouse.MetricsDatabase)
+	logstelemetryschema.Init(config.Clickhouse.LogsDatabase)
+	metertelemetryschema.Init(config.Clickhouse.MeterDatabase)
+	analytics.Init(config.Clickhouse.AnalyticsDatabase)
+	audittelemetryschema.Init(config.Clickhouse.AuditDatabase)
 
 	options, err := clickhouse.ParseDSN(config.Clickhouse.DSN)
 	if err != nil {
