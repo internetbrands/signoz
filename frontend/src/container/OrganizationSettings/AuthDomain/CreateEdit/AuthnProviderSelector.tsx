@@ -39,6 +39,14 @@ function getAuthNProviders(samlEnabled: boolean): AuthNProvider[] {
 			icon: <Key size={37} />,
 			enabled: samlEnabled,
 		},
+		{
+			key: 'ldap',
+			title: 'LDAP Authentication',
+			description:
+				'Authenticate users against an LDAP directory server. Users sign in with their email and LDAP password.',
+			icon: <KeyOutlined style={{ fontSize: '37px' }} />,
+			enabled: samlEnabled,
+		},
 	];
 }
 
