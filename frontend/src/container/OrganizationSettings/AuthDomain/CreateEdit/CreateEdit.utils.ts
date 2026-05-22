@@ -1,6 +1,7 @@
 import {
 	AuthtypesAuthDomainConfigDTO,
 	AuthtypesAuthDomainConfigGoogleDTOKind,
+	AuthtypesAuthDomainConfigLDAPDTOKind,
 	AuthtypesAuthDomainConfigOIDCDTOKind,
 	AuthtypesAuthDomainConfigSAMLDTOKind,
 	AuthtypesAuthNProviderDTO,
@@ -25,10 +26,32 @@ export function kindToProvider(
 			return AuthtypesAuthNProviderDTO.google;
 		case AuthtypesAuthDomainConfigOIDCDTOKind.oidc:
 			return AuthtypesAuthNProviderDTO.oidc;
+		case AuthtypesAuthDomainConfigLDAPDTOKind.ldap:
+			return AuthtypesAuthNProviderDTO.ldap;
 		default:
 			return '';
 	}
 }
+
+export interface LdapConfigFormValues {
+	serverUrl?: string;
+	serverPort?: number;
+	bindDn?: string;
+	bindPassword?: string;
+	userBaseDn?: string;
+	userFilter?: string;
+	emailAttribute?: string;
+	displayNameAttribute?: string;
+	groupBaseDn?: string;
+	groupFilter?: string;
+	groupMemberAttr?: string;
+	useTls?: boolean;
+	useStartTls?: boolean;
+	skipTlsVerify?: boolean;
+	searchTimeout?: number;
+	connTimeout?: number;
+}
+
 
 // Form values interface for internal use (includes array-based fields for UI)
 export interface FormValues {
@@ -39,6 +62,7 @@ export interface FormValues {
 	};
 	samlConfig?: AuthtypesSamlConfigDTO;
 	oidcConfig?: AuthtypesOIDCConfigDTO;
+	ldapConfig?: LdapConfigFormValues;
 	roleMapping?: AuthtypesRoleMappingDTO & {
 		groupMappingsList?: Array<{ groupName?: string; role?: string }>;
 	};
@@ -144,6 +168,10 @@ export function prepareInitialValues(
 				: undefined,
 		oidcConfig:
 			config?.kind === AuthtypesAuthDomainConfigOIDCDTOKind.oidc
+				? config.spec
+				: undefined,
+		ldapConfig:
+			config?.kind === AuthtypesAuthDomainConfigLDAPDTOKind.ldap
 				? config.spec
 				: undefined,
 		googleAuthConfig:
@@ -262,6 +290,13 @@ export function prepareConfig(
 				? {
 						kind: AuthtypesAuthDomainConfigOIDCDTOKind.oidc,
 						spec: values.oidcConfig,
+					}
+				: undefined;
+		case AuthtypesAuthNProviderDTO.ldap:
+			return values.ldapConfig
+				? {
+						kind: AuthtypesAuthDomainConfigLDAPDTOKind.ldap,
+						spec: values.ldapConfig,
 					}
 				: undefined;
 		default:

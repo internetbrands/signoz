@@ -33,7 +33,7 @@ type Feature struct {
 var BasicPlan = []*Feature{
 	{
 		Name:       SSO,
-		Active:     false,
+		Active:     true,
 		Usage:      0,
 		UsageLimit: -1,
 		Route:      "",

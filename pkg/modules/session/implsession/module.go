@@ -4,6 +4,7 @@ import (
 	"context"
 	"log/slog"
 	"net/url"
+	"os"
 	"slices"
 	"strings"
 	"time"
@@ -49,7 +50,7 @@ func NewModule(providerSettings factory.ProviderSettings, authNs map[authtypes.A
 	}
 }
 
-func (module *module) GetSessionContext(ctx context.Context, email valuer.Email, siteURL *url.URL) (*authtypes.SessionContext, error) {
+func (module *module) GetSessionContext(ctx context.Context, identifier string, siteURL *url.URL) (*authtypes.SessionContext, error) {
 	context := authtypes.NewSessionContext()
 
 	orgs, err := module.orgGetter.ListByOwnedKeyRange(ctx)
@@ -67,21 +68,47 @@ func (module *module) GetSessionContext(ctx context.Context, email valuer.Email,
 		orgIDs = append(orgIDs, org.ID)
 	}
 
-	users, err := module.userGetter.ListUsersByEmailAndOrgIDs(ctx, email, orgIDs)
-	if err != nil {
-		return nil, err
-	}
+	email, emailErr := valuer.NewEmail(identifier)
 
-	// filter out deleted users
-	users = slices.DeleteFunc(users, func(user *types.User) bool { return user.ErrIfDeleted() != nil })
+	if emailErr == nil {
+		// Email path: look up users by email and derive domain name from the address.
+		name := strings.Split(email.String(), "@")[1]
 
-	// Since email is a valuer, we can be sure that it is a valid email and we can split it to get the domain name.
-	name := strings.Split(email.String(), "@")[1]
+		users, err := module.userGetter.ListUsersByEmailAndOrgIDs(ctx, email, orgIDs)
+		if err != nil {
+			return nil, err
+		}
 
-	if len(users) == 0 {
-		context.Exists = false
+		// filter out deleted users
+		users = slices.DeleteFunc(users, func(user *types.User) bool { return user.ErrIfDeleted() != nil })
 
-		for _, org := range orgs {
+		if len(users) == 0 {
+			context.Exists = false
+
+			for _, org := range orgs {
+				orgContext, err := module.getOrgSessionContext(ctx, org, name, siteURL)
+				if err != nil {
+					// For some reason, there was an error in getting the org session context. Instead of failing the context call, we create a PasswordAuthNSupport for the org and add a warning.
+					orgContext = authtypes.NewOrgSessionContext(org.ID, org.Name).AddPasswordAuthNSupport(authtypes.AuthNProviderEmailPassword).AddWarning(err)
+				}
+
+				context = context.AddOrgContext(orgContext)
+			}
+
+			return context, nil
+		}
+
+		context.Exists = true
+		for _, user := range users {
+			idx := slices.IndexFunc(orgs, func(org *types.Organization) bool {
+				return org.ID == user.OrgID
+			})
+
+			if idx == -1 {
+				continue
+			}
+
+			org := orgs[idx]
 			orgContext, err := module.getOrgSessionContext(ctx, org, name, siteURL)
 			if err != nil {
 				// For some reason, there was an error in getting the org session context. Instead of failing the context call, we create a PasswordAuthNSupport for the org and add a warning.
@@ -94,26 +121,17 @@ func (module *module) GetSessionContext(ctx context.Context, email valuer.Email,
 		return context, nil
 	}
 
-	context.Exists = true
-	for _, user := range users {
-		idx := slices.IndexFunc(orgs, func(org *types.Organization) bool {
-			return org.ID == user.OrgID
-		})
-
-		if idx == -1 {
-			continue
-		}
-
-		org := orgs[idx]
+	// Username path (no "@"): can't look up by email. Use SIGNOZ_SSO_DEFAULT_DOMAIN to
+	// resolve the auth domain config — same env var used by ldappasswordauthn.
+	name := os.Getenv("SIGNOZ_SSO_DEFAULT_DOMAIN")
+	context.Exists = false
+	for _, org := range orgs {
 		orgContext, err := module.getOrgSessionContext(ctx, org, name, siteURL)
 		if err != nil {
-			// For some reason, there was an error in getting the org session context. Instead of failing the context call, we create a PasswordAuthNSupport for the org and add a warning.
 			orgContext = authtypes.NewOrgSessionContext(org.ID, org.Name).AddPasswordAuthNSupport(authtypes.AuthNProviderEmailPassword).AddWarning(err)
 		}
-
 		context = context.AddOrgContext(orgContext)
 	}
-
 	return context, nil
 }
 
@@ -193,6 +211,20 @@ func (module *module) CreateCallbackAuthNSession(ctx context.Context, authNProvi
 	return redirectURL.String(), nil
 }
 
+func (module *module) CreateLDAPSession(ctx context.Context, identifier string, password string, orgID valuer.UUID) (*authtypes.Token, error) {
+	ldapAuthN, err := getProvider[authn.PasswordAuthN](authtypes.AuthNProviderLDAP, module.authNs)
+	if err != nil {
+		return nil, err
+	}
+
+	identity, err := ldapAuthN.Authenticate(ctx, identifier, password, orgID)
+	if err != nil {
+		return nil, err
+	}
+
+	return module.tokenizer.CreateToken(ctx, identity, map[string]string{})
+}
+
 func (module *module) RotateSession(ctx context.Context, accessToken string, refreshToken string) (*authtypes.Token, error) {
 	return module.tokenizer.RotateToken(ctx, accessToken, refreshToken)
 }
@@ -217,6 +249,11 @@ func (module *module) getOrgSessionContext(ctx context.Context, org *types.Organ
 
 	if !authDomain.Enabled() {
 		return authtypes.NewOrgSessionContext(org.ID, org.Name).AddPasswordAuthNSupport(authtypes.AuthNProviderEmailPassword), nil
+	}
+
+	// PasswordAuthN SSO providers (e.g. LDAP) use the password form, not a redirect.
+	if _, ok := module.authNs[authDomain.Kind()].(authn.PasswordAuthN); ok {
+		return authtypes.NewOrgSessionContext(org.ID, org.Name).AddPasswordAuthNSupport(authDomain.Kind()), nil
 	}
 
 	provider, err := getProvider[authn.CallbackAuthN](authDomain.Kind(), module.authNs)

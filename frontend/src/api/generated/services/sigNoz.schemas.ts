@@ -2019,16 +2019,101 @@ export interface AuthtypesAuthDomainConfigOIDCDTO {
 	spec: AuthtypesOIDCConfigDTO;
 }
 
+export enum AuthtypesAuthDomainConfigLDAPDTOKind {
+	ldap = 'ldap',
+}
+export interface AuthtypesLdapConfigDTO {
+	/**
+	 * @type string
+	 */
+	bindDn?: string;
+	/**
+	 * @type string
+	 */
+	bindPassword?: string;
+	/**
+	 * @type integer
+	 */
+	connTimeout?: number;
+	/**
+	 * @type string
+	 */
+	displayNameAttribute?: string;
+	/**
+	 * @type string
+	 */
+	emailAttribute?: string;
+	/**
+	 * @type string
+	 */
+	groupBaseDn?: string;
+	/**
+	 * @type string
+	 */
+	groupFilter?: string;
+	/**
+	 * @type string
+	 */
+	groupMemberAttr?: string;
+	/**
+	 * @type integer
+	 */
+	searchTimeout?: number;
+	/**
+	 * @type integer
+	 */
+	serverPort?: number;
+	/**
+	 * @type string
+	 */
+	serverUrl?: string;
+	/**
+	 * @type boolean
+	 */
+	skipTlsVerify?: boolean;
+	/**
+	 * @type boolean
+	 */
+	useStartTls?: boolean;
+	/**
+	 * @type boolean
+	 */
+	useTls?: boolean;
+	/**
+	 * @type string
+	 */
+	userBaseDn?: string;
+	/**
+	 * @type string
+	 */
+	userFilter?: string;
+	/**
+	 * @type string
+	 */
+	usernameAttribute?: string;
+}
+
+export interface AuthtypesAuthDomainConfigLDAPDTO {
+	/**
+	 * @type string
+	 * @enum ldap
+	 */
+	kind: AuthtypesAuthDomainConfigLDAPDTOKind;
+	spec: AuthtypesLdapConfigDTO;
+}
+
 export type AuthtypesAuthDomainConfigDTO =
 	| AuthtypesAuthDomainConfigSAMLDTO
 	| AuthtypesAuthDomainConfigGoogleDTO
-	| AuthtypesAuthDomainConfigOIDCDTO;
+	| AuthtypesAuthDomainConfigOIDCDTO
+	| AuthtypesAuthDomainConfigLDAPDTO;
 
 export enum AuthtypesAuthNProviderDTO {
 	google = 'google',
 	saml = 'saml',
 	email_password = 'email_password',
 	oidc = 'oidc',
+	ldap = 'ldap',
 }
 export interface AuthtypesAuthNProviderInfoDTO {
 	/**

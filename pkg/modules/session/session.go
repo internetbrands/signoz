@@ -12,10 +12,14 @@ import (
 
 type Module interface {
 	// Gets the session context for the user. The context contains information on what the user has to do in order to create a session.
-	GetSessionContext(ctx context.Context, email valuer.Email, siteURL *url.URL) (*authtypes.SessionContext, error)
+	// identifier may be an email address or a plain username.
+	GetSessionContext(ctx context.Context, identifier string, siteURL *url.URL) (*authtypes.SessionContext, error)
 
 	// Create a session for a user using password authn provider.
 	CreatePasswordAuthNSession(ctx context.Context, authNProvider authtypes.AuthNProvider, email valuer.Email, password string, orgID valuer.UUID) (*authtypes.Token, error)
+
+	// Create a session for a user using LDAP (accepts email or plain username).
+	CreateLDAPSession(ctx context.Context, identifier string, password string, orgID valuer.UUID) (*authtypes.Token, error)
 
 	// Create a session for a user using callback authn providers.
 	CreateCallbackAuthNSession(ctx context.Context, authNProvider authtypes.AuthNProvider, values url.Values) (string, error)
@@ -36,6 +40,9 @@ type Handler interface {
 
 	// Create a session for a user using email and password.
 	CreateSessionByEmailPassword(http.ResponseWriter, *http.Request)
+
+	// Create a session for a user using LDAP (accepts email or plain username).
+	CreateSessionByLDAP(http.ResponseWriter, *http.Request)
 
 	// Create a session for a user using google callback.
 	CreateSessionByGoogleCallback(http.ResponseWriter, *http.Request)
