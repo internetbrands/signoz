@@ -20,6 +20,7 @@ var (
 	AuthNProviderSAML          = AuthNProvider{valuer.NewString("saml")}
 	AuthNProviderEmailPassword = AuthNProvider{valuer.NewString("email_password")}
 	AuthNProviderOIDC          = AuthNProvider{valuer.NewString("oidc")}
+	AuthNProviderLDAP          = AuthNProvider{valuer.NewString("ldap")}
 )
 
 var (
@@ -162,6 +163,7 @@ func (AuthNProvider) Enum() []any {
 		AuthNProviderSAML,
 		AuthNProviderEmailPassword,
 		AuthNProviderOIDC,
+		AuthNProviderLDAP,
 	}
 }
 

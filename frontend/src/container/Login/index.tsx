@@ -6,6 +6,7 @@ import { Typography } from '@signozhq/ui/typography';
 import getVersion from 'api/v1/version/get';
 import get from 'api/v2/sessions/context/get';
 import post from 'api/v2/sessions/email_password/post';
+import postLDAP from 'api/v2/sessions/ldap/post';
 import afterLogin from 'AppRoutes/utils';
 import AuthError from 'components/AuthError/AuthError';
 import ROUTES from 'constants/routes';
@@ -139,6 +140,24 @@ function Login(): JSX.Element {
 		return isPasswordAuthN || isPasswordAuthNEnabled;
 	}, [sessionsContext, sessionsOrgId, isPasswordAuthNEnabled]);
 
+	const isLDAPAuthN = useMemo((): boolean => {
+		if (!sessionsContext || !sessionsOrgId || isPasswordAuthNEnabled) {
+			return false;
+		}
+		let isLDAP = false;
+		sessionsContext.orgs.forEach((orgSession) => {
+			if (
+				orgSession.id === sessionsOrgId &&
+				orgSession.authNSupport?.password?.some(
+					(p: { provider: string }) => p.provider === 'ldap',
+				)
+			) {
+				isLDAP = true;
+			}
+		});
+		return isLDAP;
+	}, [sessionsContext, sessionsOrgId, isPasswordAuthNEnabled]);
+
 	const isCallbackAuthN = useMemo((): boolean => {
 		if (!sessionsContext) {
 			return false;
@@ -193,7 +212,13 @@ function Login(): JSX.Element {
 		setErrorMessage(undefined);
 
 		try {
-			if (isPasswordAuthN) {
+			if (isLDAPAuthN) {
+				const identifier = form.getFieldValue('email');
+				const password = form.getFieldValue('password');
+
+				const resp = await postLDAP({ identifier, password, orgId: sessionsOrgId });
+				afterLogin(resp.data.accessToken, resp.data.refreshToken);
+			} else if (isPasswordAuthN) {
 				const email = form.getFieldValue('email');
 
 				const password = form.getFieldValue('password');
@@ -280,11 +305,16 @@ function Login(): JSX.Element {
 		email?.trim() && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email),
 	);
 
+	// LDAP allows plain usernames (non-email), so only require non-empty input
+	const isIdentifierValid = isLDAPAuthN
+		? Boolean(email?.trim())
+		: isEmailValid;
+
 	const isNextButtonEnabled =
-		isEmailValid && !versionLoading && !sessionsContextLoading;
+		isIdentifierValid && !versionLoading && !sessionsContextLoading;
 
 	const isSubmitButtonEnabled = useMemo((): boolean => {
-		if (!isEmailValid || isSubmitting) {
+		if (!isIdentifierValid || isSubmitting) {
 			return false;
 		}
 		const hasMultipleOrgs = (sessionsContext?.orgs.length ?? 0) > 1;
@@ -294,7 +324,7 @@ function Login(): JSX.Element {
 
 		return !(isPasswordAuthN && !password?.trim());
 	}, [
-		isEmailValid,
+		isIdentifierValid,
 		isSubmitting,
 		sessionsContext,
 		orgId,
@@ -320,14 +350,20 @@ function Login(): JSX.Element {
 
 				<div className="login-form-card">
 					<ParentContainer>
-						<Label htmlFor="signupEmail">Email address</Label>
+						<Label htmlFor="signupEmail">
+							{isLDAPAuthN ? 'Username or Email' : 'Email address'}
+						</Label>
 						<FormContainer.Item name="email">
 							<Input
-								type="email"
+								type={isLDAPAuthN ? 'text' : 'email'}
 								id="email"
 								data-testid="email"
 								required
-								placeholder="e.g. john@signoz.io"
+								placeholder={
+									isLDAPAuthN
+										? 'e.g. john.doe or john@example.com'
+										: 'e.g. john@signoz.io'
+								}
 								disabled={versionLoading}
 								className="login-form-input"
 								onPressEnter={onNextHandler}

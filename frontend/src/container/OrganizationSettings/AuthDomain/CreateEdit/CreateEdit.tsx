@@ -29,6 +29,7 @@ import {
 	prepareRoleMapping,
 } from './CreateEdit.utils';
 import ConfigureGoogleAuthAuthnProvider from './Providers/AuthnGoogleAuth';
+import ConfigureLDAPAuthnProvider from './Providers/AuthnLDAP';
 import ConfigureOIDCAuthnProvider from './Providers/AuthnOIDC';
 import ConfigureSAMLAuthnProvider from './Providers/AuthnSAML';
 
@@ -44,6 +45,8 @@ function configureAuthnProvider(
 			return <ConfigureGoogleAuthAuthnProvider isCreate={isCreate} />;
 		case 'oidc':
 			return <ConfigureOIDCAuthnProvider isCreate={isCreate} />;
+		case 'ldap':
+			return <ConfigureLDAPAuthnProvider isCreate={isCreate} />;
 		default:
 			return <ConfigureGoogleAuthAuthnProvider isCreate={isCreate} />;
 	}

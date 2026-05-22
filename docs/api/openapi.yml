@@ -528,6 +528,7 @@ components:
       discriminator:
         mapping:
           google: '#/components/schemas/AuthtypesAuthDomainConfigGoogle'
+          ldap: '#/components/schemas/AuthtypesAuthDomainConfigLDAP'
           oidc: '#/components/schemas/AuthtypesAuthDomainConfigOIDC'
           saml: '#/components/schemas/AuthtypesAuthDomainConfigSAML'
         propertyName: kind
@@ -535,6 +536,7 @@ components:
       - $ref: '#/components/schemas/AuthtypesAuthDomainConfigSAML'
       - $ref: '#/components/schemas/AuthtypesAuthDomainConfigGoogle'
       - $ref: '#/components/schemas/AuthtypesAuthDomainConfigOIDC'
+      - $ref: '#/components/schemas/AuthtypesAuthDomainConfigLDAP'
       type: object
     AuthtypesAuthDomainConfigGoogle:
       properties:
@@ -542,6 +544,16 @@ components:
           $ref: '#/components/schemas/AuthtypesAuthNProvider'
         spec:
           $ref: '#/components/schemas/AuthtypesGoogleConfig'
+      required:
+      - kind
+      - spec
+      type: object
+    AuthtypesAuthDomainConfigLDAP:
+      properties:
+        kind:
+          $ref: '#/components/schemas/AuthtypesAuthNProvider'
+        spec:
+          $ref: '#/components/schemas/AuthtypesLdapConfig'
       required:
       - kind
       - spec
@@ -572,6 +584,7 @@ components:
       - saml
       - email_password
       - oidc
+      - ldap
       type: string
     AuthtypesAuthNProviderInfo:
       properties:
@@ -708,6 +721,43 @@ components:
       - clientId
       - clientSecret
       type: object
+    AuthtypesLdapConfig:
+      properties:
+        bindDn:
+          type: string
+        bindPassword:
+          type: string
+        connTimeout:
+          type: integer
+        displayNameAttribute:
+          type: string
+        emailAttribute:
+          type: string
+        groupBaseDn:
+          type: string
+        groupFilter:
+          type: string
+        groupMemberAttr:
+          type: string
+        searchTimeout:
+          type: integer
+        serverPort:
+          type: integer
+        serverUrl:
+          type: string
+        skipTlsVerify:
+          type: boolean
+        useStartTls:
+          type: boolean
+        useTls:
+          type: boolean
+        userBaseDn:
+          type: string
+        userFilter:
+          type: string
+        usernameAttribute:
+          type: string
+      type: object
     AuthtypesOIDCConfig:
       properties:
         claimMapping:
@@ -763,6 +813,15 @@ components:
     AuthtypesPostableEmailPasswordSession:
       properties:
         email:
+          type: string
+        orgId:
+          type: string
+        password:
+          type: string
+      type: object
+    AuthtypesPostableLDAPSession:
+      properties:
+        identifier:
           type: string
         orgId:
           type: string
@@ -23218,6 +23277,53 @@ paths:
                 $ref: '#/components/schemas/RenderErrorResponse'
           description: Internal Server Error
       summary: Create session by email and password
+      tags:
+      - sessions
+  /api/v2/sessions/ldap:
+    post:
+      deprecated: false
+      description: This endpoint creates a session for a user using LDAP authentication.
+        The identifier may be an email address or a plain username.
+      operationId: CreateSessionByLDAP
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AuthtypesPostableLDAPSession'
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                properties:
+                  data:
+                    $ref: '#/components/schemas/AuthtypesGettableToken'
+                  status:
+                    type: string
+                required:
+                - status
+                - data
+                type: object
+          description: OK
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RenderErrorResponse'
+          description: Bad Request
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RenderErrorResponse'
+          description: Not Found
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RenderErrorResponse'
+          description: Internal Server Error
+      summary: Create session by LDAP
       tags:
       - sessions
   /api/v2/sessions/rotate:

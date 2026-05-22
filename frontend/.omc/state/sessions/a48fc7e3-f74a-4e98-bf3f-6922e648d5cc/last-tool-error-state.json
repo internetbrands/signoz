@@ -1,0 +1,7 @@
+{
+  "tool_name": "Bash",
+  "tool_input_preview": "{\"command\":\"cd /Users/james/Workspace/ib/developer-platform/telemetry/ike-telemetry-backend/.forks/signoz/frontend\\ncat .nvmrc 2>/dev/null\\nwhich -a node nvm fnm asdf n 2>/dev/null\\nls /opt/homebrew/o...",
+  "error": "Exit code 1\n22\n/Users/james/.nix-profile/bin/node",
+  "timestamp": "2026-09-03T18:48:09.796Z",
+  "retry_count": 1
+}

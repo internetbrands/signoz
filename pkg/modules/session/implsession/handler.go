@@ -13,7 +13,6 @@ import (
 	"github.com/SigNoz/signoz/pkg/http/render"
 	"github.com/SigNoz/signoz/pkg/modules/session"
 	"github.com/SigNoz/signoz/pkg/types/authtypes"
-	"github.com/SigNoz/signoz/pkg/valuer"
 )
 
 type handler struct {
@@ -29,11 +28,7 @@ func (handler *handler) GetSessionContext(rw http.ResponseWriter, req *http.Requ
 	ctx, cancel := context.WithTimeout(req.Context(), 10*time.Second)
 	defer cancel()
 
-	email, err := valuer.NewEmail(req.URL.Query().Get("email"))
-	if err != nil {
-		render.Error(rw, err)
-		return
-	}
+	identifier := req.URL.Query().Get("email")
 
 	siteURL, err := url.Parse(req.URL.Query().Get("ref"))
 	if err != nil {
@@ -41,7 +36,7 @@ func (handler *handler) GetSessionContext(rw http.ResponseWriter, req *http.Requ
 		return
 	}
 
-	sessionContext, err := handler.module.GetSessionContext(ctx, email, siteURL)
+	sessionContext, err := handler.module.GetSessionContext(ctx, identifier, siteURL)
 	if err != nil {
 		render.Error(rw, err)
 		return
@@ -61,6 +56,25 @@ func (handler *handler) CreateSessionByEmailPassword(rw http.ResponseWriter, req
 	}
 
 	token, err := handler.module.CreatePasswordAuthNSession(ctx, authtypes.AuthNProviderEmailPassword, body.Email, body.Password, body.OrgID)
+	if err != nil {
+		render.Error(rw, err)
+		return
+	}
+
+	render.Success(rw, http.StatusOK, authtypes.NewGettableTokenFromToken(token, handler.module.GetRotationInterval(ctx)))
+}
+
+func (handler *handler) CreateSessionByLDAP(rw http.ResponseWriter, req *http.Request) {
+	ctx, cancel := context.WithTimeout(req.Context(), 15*time.Second)
+	defer cancel()
+
+	body := new(authtypes.PostableLDAPSession)
+	if err := binding.JSON.BindBody(req.Body, body); err != nil {
+		render.Error(rw, err)
+		return
+	}
+
+	token, err := handler.module.CreateLDAPSession(ctx, body.Identifier, body.Password, body.OrgID)
 	if err != nil {
 		render.Error(rw, err)
 		return

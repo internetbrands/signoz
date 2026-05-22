@@ -49,6 +49,18 @@ var authDomainConfigVariants = []authDomainConfigVariant{
 		schema:    authDomainConfigOIDC{},
 		schemaRef: "#/components/schemas/AuthtypesAuthDomainConfigOIDC",
 	},
+	{
+		kind: AuthNProviderLDAP,
+		decodeSpec: func(data []byte) (any, error) {
+			spec := LdapConfig{}
+			if err := json.Unmarshal(data, &spec); err != nil {
+				return nil, err
+			}
+			return spec, nil
+		},
+		schema:    authDomainConfigLDAP{},
+		schemaRef: "#/components/schemas/AuthtypesAuthDomainConfigLDAP",
+	},
 }
 
 type authDomainConfigVariant struct {
@@ -76,6 +88,11 @@ type authDomainConfigGoogle struct {
 type authDomainConfigOIDC struct {
 	Kind AuthNProvider `json:"kind" description:"The kind of authn provider." required:"true"`
 	Spec OIDCConfig    `json:"spec" description:"The oidc configuration." required:"true"`
+}
+
+type authDomainConfigLDAP struct {
+	Kind AuthNProvider `json:"kind" description:"The kind of authn provider." required:"true"`
+	Spec LdapConfig    `json:"spec" description:"The ldap configuration." required:"true"`
 }
 
 type StorableAuthDomainConfig struct {
@@ -172,6 +189,15 @@ func (config AuthDomainConfig) OIDCConfig() (OIDCConfig, error) {
 	spec, ok := config.Spec.(OIDCConfig)
 	if !ok {
 		return OIDCConfig{}, errors.Newf(errors.TypeInternal, ErrCodeAuthDomainMismatch, "auth domain config is not oidc")
+	}
+
+	return spec, nil
+}
+
+func (config AuthDomainConfig) LdapConfig() (LdapConfig, error) {
+	spec, ok := config.Spec.(LdapConfig)
+	if !ok {
+		return LdapConfig{}, errors.Newf(errors.TypeInternal, ErrCodeAuthDomainMismatch, "auth domain config is not ldap")
 	}
 
 	return spec, nil
