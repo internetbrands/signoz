@@ -34,7 +34,7 @@ type Feature struct {
 var BasicPlan = []*Feature{
 	{
 		Name:       SSO,
-		Active:     false,
+		Active:     true,
 		Usage:      0,
 		UsageLimit: -1,
 		Route:      "",
@@ -122,6 +122,13 @@ var EnterprisePlan = []*Feature{
 }
 
 var DefaultFeatureSet = []*Feature{
+	{
+		Name:       SSO,
+		Active:     true,
+		Usage:      0,
+		UsageLimit: -1,
+		Route:      "",
+	},
 	{
 		Name:       DotMetricsEnabled,
 		Active:     false,
